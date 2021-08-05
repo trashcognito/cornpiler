@@ -96,9 +96,12 @@ class ASTBody : ASTBase {
     public:
     std::vector<ASTBase> body;
     virtual void codegen() {
+        //Creates a new local scope
+        LocalScope.emplace(LocalScope.end());
         for (auto it = body.begin(); it != body.end(); ++it) {
             it->codegen();
         }
+        LocalScope.pop_back();
     }
     ASTBody(std::vector<ASTBase> body) {
         this->body = body;
