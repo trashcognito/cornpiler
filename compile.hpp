@@ -49,7 +49,7 @@ class token {
  public:
   token_type type;
   std::string value;
-  token(token_type t, std::string v) {
+  token(token_type t, std::string v) { // god forgive me for writing a function inside a header file
     type = t;
     value = v;
   }
