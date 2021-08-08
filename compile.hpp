@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <variant>
 
 #define DEBUG
 
@@ -11,6 +12,8 @@ bool check_id_constraints(std::string id, char c);
 #ifdef DEBUG
 std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
 #endif
+
+typedef std::variant<int, std::string> scope_element;
 
 enum token_type {
   string,
