@@ -55,6 +55,8 @@ class token {
   }
 };
 
+std::vector<token> tokenize_program(std::string program, int length);
+
 class AST {
   act_type act;
 };
