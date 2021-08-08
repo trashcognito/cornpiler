@@ -316,5 +316,7 @@ int main() {
     return itt;
   };
 
+  recursive_lex(-1, {0});
+
   return EXIT_SUCCESS;
 }
