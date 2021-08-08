@@ -1,35 +1,55 @@
+#pragma once
+
 #include <cstdint>
 #include <vector>
 #include <string>
 
-class ast_body {
-    public:
-        std::vector<AST*> body;
+enum token_type {
+    
+    string,
+    identifier,
+    number,
+    bracket,
+    semi,
+    sep,
+    sym
+};
+
+enum act_type {
+    error,
+    statement,
+    statement_with_body,
+    statement_with_two_bodies,
+    varop,
+    vardef,
+    type,
+    fundef,
+    extdef,
+    glbdef,
+    call,
+    varset,
+    getvar,
+    const_str,
+    const_number,
+    oper,
+    expr,
+    arrset,
+    arrget,
+    outtype
+};
+
+class token {
+    token_type type;
+    std::string value;
 };
 
 class AST {
-    uint8_t act;    // action: 
-                    // 0:   error
-                    // 1:   statement
-                    // 2:   statement with body
-                    // 3:   statement with two bodies
-                    // 4:   varop
-                    // 5:   vardef
-                    // 6:   type
-                    // 7:   fundef
-                    // 8:   extdef
-                    // 9:   glbdef
-                    // 10:  call
-                    // 11:  varset
-                    // 12:  getvar
-                    // 13:  const/str
-                    // 14:  const/number
-                    // 15:  oper
-                    // 16:  expr
-                    // 17:  arrset
-                    // 18:  arrget
-                    // 19:  outtype
+    act_type act;
+};
 
+class ast_body {
+    public:
+        std::vector<AST*> body;
 };
 
 namespace ast_types {

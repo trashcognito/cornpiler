@@ -13,3 +13,5 @@ build/*
 .cache
 .vscode/
 .vscode/settings.json
+tests/
+compile
