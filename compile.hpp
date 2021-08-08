@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 
+#define DEBUG
 
 bool check_id_constraints(std::string id, char c);
 
-
+#ifdef DEBUG
 std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
+#endif
 
 enum token_type {
   string,

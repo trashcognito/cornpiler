@@ -3,16 +3,16 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cstdlib>
 
 bool check_id_constraints(std::string id, char c) {
   bool retval = isalpha(c) || c == '_';
   if (!id.empty()) retval |= isdigit(c);
-  // std::cout << "Checking id " << id << " for " << c << ": " << (retval ? "valid" : "invalid") << std::endl;
   return retval;
 }
 
 int main() {
-  std::ifstream is("tests/bottlesofbeer99.crn");
+  std::ifstream is("tests/vartest.crn");
 
   if (!is) {
     std::cout << "File not found" << std::endl;
@@ -35,16 +35,20 @@ int main() {
     std::vector<token> tokens;
     std::string full_token = "";
     bool number = false;
-    struct{
+    struct {
       bool going = false;
       bool escaping = false;
     } string;
-    struct{
+    struct {
       bool going = false;
       std::string id = "";
     } identifier;
     bool symbol = false;
     bool comment = false;
+    struct {
+      bool going = false;
+      bool escaping = false;
+    } chr;
 
     void reset() {
       full_token = "";
@@ -55,6 +59,8 @@ int main() {
       identifier.id = "";
       symbol = false;
       comment = false;
+      chr.going = false;
+      chr.escaping = false;
     }
 
     void push(token_type t) {
@@ -73,6 +79,23 @@ int main() {
 
     char c = i[file_buffer];
 
+    auto escape_chr = [&]() {
+      if (c == '\\') {
+        status.full_token += '\\';
+      } else if (c == '"') {
+        status.full_token += c;
+      } else if (c == 'n') {
+        status.full_token += '\n';
+      } else if (c == 't') {
+        status.full_token += '\t';
+      } else if (c == 'r') {
+        status.full_token += '\r';
+      } else {
+        std::cout << "Invalid escape character: \\" << c << std::endl;  // we can maybe do something more useful here like appending the character by itself but who cares im in charge now
+        exit(-1); // it should be safe to use exit here - https://stackoverflow.com/questions/30250934/how-to-end-c-code
+      }
+    };
+
     if (status.comment) {
       if (c == '\n') status.comment = false;
       continue;
@@ -82,20 +105,7 @@ int main() {
 
     if (status.string.going) {
       if (status.string.escaping) {
-        if (c == '\\') {
-          status.full_token += '\\';
-        } else if (c == '"') {
-          status.full_token += c;
-        } else if (c == 'n') {
-          status.full_token += '\n';
-        } else if (c == 't') {
-          status.full_token += '\t';
-        } else if (c == 'r') {
-          status.full_token += '\r';
-        } else {
-          std::cout << "Invalid escape character: \\" << c << std::endl;  // we can maybe do something more useful here like appending the character by itself but who cares im in charge now
-          return -1;
-        }
+        escape_chr();
         status.string.escaping = false;
       } else {
         if (c == '"') {
@@ -104,6 +114,26 @@ int main() {
         } else if (c == '\\') {
           status.string.escaping = true;
         } else {
+          status.full_token += c;
+        }
+      }
+    } else if (status.chr.going) {
+      if (status.chr.escaping) {
+        escape_chr();
+        status.chr.escaping = false;
+      } else {
+        if (c == '\'') {
+          if(status.full_token.length() != 1){
+            std::cout << "Invalid character literal size: " << status.full_token.length() << std::endl;
+            return -1;
+          }else{
+            status.full_token = std::to_string(status.full_token[0]);
+            status.push(token_type::number);
+            status.reset();
+          }
+        } else if (c == '\\') {
+          status.chr.escaping = true;
+        }else{
           status.full_token += c;
         }
       }
@@ -133,53 +163,34 @@ int main() {
           status.full_token += c;
         } else {
           if (status.number) {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.push(token_type::number);
             status.reset();
           }
           if (c == '"') {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.string.going = true;
+          } else if (c == '\'') {
+            status.chr.going = true;
           } else if (std::string("()[]{}").find(c) != std::string::npos) {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.full_token += c;
             status.push(token_type::bracket);
             status.reset();
           } else if (c == ';') {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.full_token += c;
             status.push(token_type::semi);
             status.reset();
           } else if (c == ',') {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.full_token += c;
             status.push(token_type::sep);
             status.reset();
           } else if (c == '#') {
-            if (status.symbol) {
-              status.push(token_type::sym);
-              status.reset();
-            }
             status.reset();
             status.comment = true;
           } else if (!isspace(c)) {
             status.symbol = true;
             status.full_token += c;
+          } else if (status.symbol) {
+            status.push(token_type::sym);
+            status.reset();
           }
         }
       }
@@ -190,9 +201,11 @@ int main() {
   status.push(token_type::bracket);
   status.reset();
 
+#ifdef DEBUG
   for (auto &t : status.tokens) {
     std::cout << "Token: " << t.value << "\t\t\tType: " << DEBUG_TOKEN_TYPES[t.type] << std::endl;
   }
+#endif
 
-  return 0;
+  return EXIT_SUCCESS;
 }
