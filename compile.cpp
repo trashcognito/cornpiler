@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <functional>
 
 bool check_id_constraints(std::string id, char c) {
   bool retval = isalpha(c) || c == '_';
@@ -217,7 +218,7 @@ int main() {
   auto recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode = 0) {  // returns the new itt
 
 #pragma region
-    auto goto_ast_scope = [&](const std::function<void(AST *)>&call_after_finished){
+    auto goto_ast_scope = [&](std::function<void(AST *)> call_after_finished){
             std::vector<scope_element> current_scope = scope;
       AST *that_ast = &(globals.global);
       int scope_size = scope.size();
