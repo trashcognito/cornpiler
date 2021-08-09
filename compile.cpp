@@ -261,10 +261,16 @@ int main() {
 
     auto append_ast_scope = [&](std::vector<scope_element> scope, AST val) {
       goto_ast_scope([&](AST *that_ast){
-        AST *copied_ast = new AST;
-        *copied_ast = val;
-        ((ast_body*)that_ast)->body.push_back(copied_ast);
+        ((ast_body*)that_ast)->body.push_back(new AST{val});
       });
+    };
+
+    auto get_ast_scope = [&](std::vector<scope_element> scope){ // returns a pointer to that ast
+      AST *retval;
+      goto_ast_scope([&](AST *that_ast){
+        retval = that_ast;
+      });
+      return retval;
     };
 
 #pragma endregion lexer_functions
