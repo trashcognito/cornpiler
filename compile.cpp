@@ -217,8 +217,8 @@ int main() {
   auto recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode = 0) {  // returns the new itt
 
 #pragma region
-    auto set_ast_scope = [&](std::vector<scope_element> scope, AST val) {
-      std::vector<scope_element> current_scope = scope;
+    auto goto_ast_scope = [&](const std::function<void(AST *)>&call_after_finished){
+            std::vector<scope_element> current_scope = scope;
       AST *that_ast = &(globals.global);
       int scope_size = scope.size();
       int scope_i = 0;
@@ -246,9 +246,16 @@ int main() {
           }
         }
         if(scope_size -1 >= ++scope_i){
-          *that_ast = val;
+          // *that_ast = val;
+          call_after_finished(that_ast);
         }
       }
+    };
+
+    auto set_ast_scope = [&](std::vector<scope_element> scope, AST val) {
+      goto_ast_scope([&](AST *that_ast){
+        *that_ast = val;
+      });
     };
 #pragma endregion lexer_functions
 
