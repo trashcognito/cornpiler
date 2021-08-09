@@ -212,9 +212,40 @@ int main() {
   std::vector<token> program_tokens = tokenize_program(file_buffer, is_length);
   delete[] file_buffer;
 
-  ast_body global_scope;
+  ast_types::global_scope globals;
 
-  auto recursive_lex = [&](int old_itt, std::vector<int> scope, int parsing_mode = 0) {  // returns the new itt
+  auto recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode = 0) {  // returns the new itt
+
+#pragma region
+    auto set_ast_scope = [&](std::vector<scope_element> scope, AST val) {
+      std::vector<scope_element> current_scope = scope;
+      AST *that_ast = &(globals.global);
+      for (auto s : scope) {   // copy, do not reference
+        if (s.index() == 0) {  // int
+          that_ast = (((ast_body *)that_ast)->body)[std::get<int>(s)];
+        } else {
+          std::string s_name = std::get<std::string>(s);
+          if(s_name == "global"){
+            that_ast = &(((ast_types::global_scope *)that_ast)->global);
+          }else if(s_name == "args"){
+            that_ast = &(((ast_types::with_args *)that_ast)->args);
+          }else if(s_name == "body"){
+            that_ast = &(((ast_types::with_body *)that_ast)->body);
+          }else if(s_name == "second_body"){
+            that_ast = &(((ast_types::with_second_body *)that_ast)->second_body);
+          }else if(s_name == "type"){
+            that_ast = &(((ast_types::with_type *)that_ast)->type);
+          }else if(s_name == "return_type"){
+            that_ast = &(((ast_types::with_return_type *)that_ast)->return_type);
+          }else if(s_name == "arr_index"){
+            that_ast = &(((ast_types::arrget *)that_ast)->index);
+          }else if(s_name == "arr_array"){
+            that_ast = &(((ast_types::arrget *)that_ast)->array);
+          }
+        }
+      }
+    };
+#pragma endregion lexer_functions
 
     int last_seen_op = -1;
 
@@ -241,36 +272,36 @@ int main() {
 
       switch (initial_token.type) {
         case token_type::identifier: {
-          if(initial_token.value == "if"){
+          if (initial_token.value == "if") {
             // double body statement
-          }else if(initial_token.value == "while" || initial_token.value == "foreach") {
+          } else if (initial_token.value == "while" || initial_token.value == "foreach") {
             // single body statement
-          }else if(initial_token.value == "return" || initial_token.value == "break" || initial_token.value == "continue"){
+          } else if (initial_token.value == "return" || initial_token.value == "break" || initial_token.value == "continue") {
             // statement
-          }else if(initial_token.value == "deref" || initial_token.value == "ref"){
+          } else if (initial_token.value == "deref" || initial_token.value == "ref") {
             // varop
-          }else if(initial_token.value == "var" ||initial_token.value == "glvar"){ // TODO: autodetect glvar and deprecate it
+          } else if (initial_token.value == "var" || initial_token.value == "glvar") {  // TODO: autodetect glvar and deprecate it
             // vardef
-          }else if(initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned"){
+          } else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
             // outer type
-          }else if(initial_token.value == "str" || initial_token.value == "bool" || initial_token.value == "byte" || initial_token.value == "word" || initial_token.value == "int" || initial_token.value == "int64" || initial_token.value == "int128" ){
+          } else if (initial_token.value == "str" || initial_token.value == "bool" || initial_token.value == "byte" || initial_token.value == "word" || initial_token.value == "int" || initial_token.value == "int64" || initial_token.value == "int128" || initial_token.value == "float") {
             // inner type
-          }else if(initial_token.value == "fun"){
+          } else if (initial_token.value == "fun") {
             // have FUN! jk function
-          }else if(initial_token.value == "ext"){ // todo: autodetect and deprecate
+          } else if (initial_token.value == "ext") {  // todo: autodetect and deprecate
             // external function
-          }else{
+          } else {
             look_ahead(1);
-            if(program_tokens[itt].value == "("){
+            if (program_tokens[itt].value == "(") {
               // function call
-            }else{
+            } else {
               // this should be a variable
               // since we have already incremented the itt, we can check whether it is a definition or a reference right away
-              if(program_tokens[itt].value == "=" || program_tokens[itt].value[1] == '='){
+              if (program_tokens[itt].value == "=" || program_tokens[itt].value[1] == '=') {
                 // definition
                 token operation = program_tokens[itt];
                 token var_name = program_tokens[itt - 1];
-              }else{
+              } else {
                 // reference
                 itt -= 1;
               }
@@ -295,28 +326,28 @@ int main() {
           break;
         }
       }
-      if(parsing_mode != 0){
-        if(program_tokens[itt].value == "," || program_tokens[itt].value == "." || program_tokens[itt].value == ")"){ // "." could be unnecessary
+      if (parsing_mode != 0) {
+        if (program_tokens[itt].value == "," || program_tokens[itt].value == "." || program_tokens[itt].value == ")") {  // "." could be unnecessary
           break;
         }
       }
 
-      if(parsing_mode == 2){
+      if (parsing_mode == 2) {
         look_ahead(1);
-        itt -= 1; // check for end of line
+        itt -= 1;  // check for end of line
         // check for operations
-      }else if(parsing_mode == 3){
-        if(program_tokens[itt].value == "="){
+      } else if (parsing_mode == 3) {
+        if (program_tokens[itt].value == "=") {
           break;
         }
-      }else if(parsing_mode == 4){
+      } else if (parsing_mode == 4) {
         break;
       }
     }
     return itt;
   };
 
-  recursive_lex(-1, {0});
+  recursive_lex(-1, {"globals"});
 
   return EXIT_SUCCESS;
 }

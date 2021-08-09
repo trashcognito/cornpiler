@@ -2,8 +2,8 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #define DEBUG
 
@@ -52,7 +52,7 @@ class token {
  public:
   token_type type;
   std::string value;
-  token(token_type t, std::string v) { // god forgive me for writing a function inside a header file
+  token(token_type t, std::string v) {  // god forgive me for writing a function inside a header file
     type = t;
     value = v;
   }
@@ -64,113 +64,121 @@ class AST {
   act_type act;
 };
 
-class ast_body {
+class ast_body : public AST {
  public:
   std::vector<AST*> body;
 };
 
 namespace ast_types {
 
-class statement : AST {
+#pragma region
+class with_args : public AST {
  public:
-  std::string name;
   ast_body args;
 };
-class statement_with_body : statement {
+class with_body : public AST {
  public:
   ast_body body;
 };
-class statement_with_two_bodies : statement_with_body {
+class with_second_body : public AST {
  public:
   ast_body second_body;
 };
+class with_type : public AST {
+ public:
+  ast_body type;
+};
+class with_return_type : public AST {
+ public:
+  ast_body return_type;
+};
+#pragma endregion ast_global_types
 
-class varop : AST {
+class global_scope : public AST {
+ public:
+  ast_body global;
+};
+
+class statement : public with_args {
+ public:
+  std::string name;
+};
+class statement_with_body : public statement, public with_body {
+};
+class statement_with_two_bodies : public statement_with_body, public with_second_body {
+};
+
+class varop : public AST {
  public:
   std::string name;
   std::string var;
 };
 
-class vardef : AST {
+class vardef : public with_args, public with_type {
  public:
   std::string name;
-  ast_body args;
-  ast_body type;
 };
 
-class type : AST {
+class type : public AST {
  public:
   std::string type;
 };
 
-class out_type : AST {
+class out_type : public with_type {
  public:
   std::string name;
-  ast_body type;
 };
 
-class extdef : AST {
+class extdef : public with_args {
  public:
   std::string name;
-  ast_body args;
-  ast_body return_type;
 };
 
-class fundef : AST {
+class fundef : public with_args, public with_body, public with_return_type {
  public:
   std::string name;
-  ast_body args;
-  ast_body return_type;
-  ast_body body;
 };
 
 class glbdef : vardef {
 };
 
-class call : AST {
- public:
-  std::string name;
-  ast_body args;
-};
-
-class varset : AST {
- public:
-  std::string name;
-  ast_body args;
-};
-
-class getvar : AST {
+class call : public with_args {
  public:
   std::string name;
 };
 
-class const_str : AST {
+class varset : public with_args {
+ public:
+  std::string name;
+};
+
+class getvar : public AST {
+ public:
+  std::string name;
+};
+
+class const_str : public AST {
  public:
   std::string value;
 };
 
-class const_int : AST {
+class const_int : public AST {
  public:
   int value;
 };
 
-class oper : AST {
+class oper : public with_args {
  public:
   char op;
-  AST args[2];
 };
 
-class expr : AST {
- public:
-  AST arg;
+class expr : public with_args {
 };
 
-class arrset : AST {
- public:
-  ast_body args;
+class arrset : public with_args { // only 2 args
 };
 
-class arrget : AST {
+class arrget : public AST {
  public:
   AST index;
   AST array;
