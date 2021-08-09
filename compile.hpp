@@ -94,6 +94,21 @@ class with_return_type : public AST {
 };
 #pragma endregion ast_global_types
 
+#pragma region
+  class string_t : public AST {
+    public:
+      std::string value;
+  };
+  class char_t : public AST {
+    public:
+      char value;
+  };
+  class number_t : public AST {
+    public:
+      int value;
+  };
+#pragma endregion standard_types_as_ast
+
 class global_scope : public AST {
  public:
   ast_body global;
@@ -101,7 +116,7 @@ class global_scope : public AST {
 
 class statement : public with_args {
  public:
-  std::string name;
+  string_t name;
 };
 class statement_with_body : public statement, public with_body {
 };
@@ -110,33 +125,33 @@ class statement_with_two_bodies : public statement_with_body, public with_second
 
 class varop : public AST {
  public:
-  std::string name;
-  std::string var;
+  string_t name;
+  string_t var;
 };
 
 class vardef : public with_args, public with_type {
  public:
-  std::string name;
+  string_t name;
 };
 
 class type : public AST {
  public:
-  std::string type;
+  string_t type;
 };
 
 class out_type : public with_type {
  public:
-  std::string name;
+  string_t name;
 };
 
 class extdef : public with_args {
  public:
-  std::string name;
+  string_t name;
 };
 
 class fundef : public with_args, public with_body, public with_return_type {
  public:
-  std::string name;
+  string_t name;
 };
 
 class glbdef : vardef {
@@ -144,32 +159,32 @@ class glbdef : vardef {
 
 class call : public with_args {
  public:
-  std::string name;
+  string_t name;
 };
 
 class varset : public with_args {
  public:
-  std::string name;
+  string_t name;
 };
 
 class getvar : public AST {
  public:
-  std::string name;
+  string_t name;
 };
 
 class const_str : public AST {
  public:
-  std::string value;
+  string_t value;
 };
 
 class const_int : public AST {
  public:
-  int value;
+  number_t value;
 };
 
 class oper : public with_args {
  public:
-  char op;
+  char_t op;
 };
 
 class expr : public with_args {

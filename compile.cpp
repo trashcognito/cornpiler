@@ -220,6 +220,8 @@ int main() {
     auto set_ast_scope = [&](std::vector<scope_element> scope, AST val) {
       std::vector<scope_element> current_scope = scope;
       AST *that_ast = &(globals.global);
+      int scope_size = scope.size();
+      int scope_i = 0;
       for (auto s : scope) {   // copy, do not reference
         if (s.index() == 0) {  // int
           that_ast = (((ast_body *)that_ast)->body)[std::get<int>(s)];
@@ -242,6 +244,9 @@ int main() {
           }else if(s_name == "arr_array"){
             that_ast = &(((ast_types::arrget *)that_ast)->array);
           }
+        }
+        if(scope_size -1 >= ++scope_i){
+          *that_ast = val;
         }
       }
     };
