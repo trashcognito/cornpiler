@@ -258,6 +258,15 @@ int main() {
         *that_ast = val;
       });
     };
+
+    auto append_ast_scope = [&](std::vector<scope_element> scope, AST val) {
+      goto_ast_scope([&](AST *that_ast){
+        AST *copied_ast = new AST;
+        *copied_ast = val;
+        ((ast_body*)that_ast)->body.push_back(copied_ast);
+      });
+    };
+
 #pragma endregion lexer_functions
 
     int last_seen_op = -1;
