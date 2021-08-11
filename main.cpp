@@ -49,6 +49,7 @@ static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 class ASTBase {
     public:
     virtual void codegen() {
+        llvm::errs() << "UNREACHABLE CODE REACHED ASTBase";
         //THIS SHOULD BE UNREACHABLE
     };
     //virtual ~ASTBase();
@@ -57,6 +58,7 @@ class ASTBase {
 class ASTValue {
     public:
     virtual llvm::Value *codegen() {
+        llvm::errs() << "UNREACHABLE CODE REACHED ASTValue";
         //THIS SHOULD BE UNREACHABLE
         return nullptr;
     };
@@ -210,6 +212,7 @@ class ASTType {
     public:
     std::string name;
     virtual llvm::Type *get_type() {
+        llvm::errs() << "UNREACHABLE CODE REACHED ASTType";
         //THIS SHOULD BE UNREACHABLE
         return nullptr;
     };
@@ -569,6 +572,7 @@ class ASTUnaryOp : public ASTValue {
 class ASTGlobalEntry {
     public:
     virtual void codegen() {
+        llvm::errs() << "UNREACHABLE CODE REACHED ASTGlobalEntry";
         //THIS SHOULD BE UNREACHABLE
     };
     std::string name;
@@ -701,6 +705,8 @@ int main(int argc, char *argv[]) {
 
   llvm::legacy::PassManager pass;
   auto FileType = llvm::CGFT_ObjectFile;
+  //check module
+    TheModule->print(llvm::errs(), nullptr);
 
   if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
     llvm::errs() << "TheTargetMachine can't emit a file of this type";
