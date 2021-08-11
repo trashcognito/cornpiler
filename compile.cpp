@@ -215,7 +215,7 @@ int main() {
 
   ast_types::global_scope globals;
 
-  auto recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode = 0) {  // returns the new itt
+  std::function<int(int, std::vector<scope_element>, int)> recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode) {  // returns the new itt
 
 #pragma region
     auto goto_ast_scope = [&](std::vector<scope_element> in_scope, std::function<void(AST *)> call_after_finished) {
@@ -223,7 +223,7 @@ int main() {
       int scope_size = scope.size();
       int scope_i = 0;
       for (auto s : in_scope) {  // copy, do not reference
-        if ((int)s >= 0) {            // int
+        if ((int)s >= 0) {       // int
           that_ast = ((dynamic_cast<ast_body *>(that_ast))->body)[(int)s];
         } else {
           switch ((scope_element)s) {
@@ -270,9 +270,12 @@ int main() {
     };
 
     auto append_ast_scope = [&](std::vector<scope_element> scope, AST val) {
+      int index_inserted;
       goto_ast_scope(scope, [&](AST *that_ast) {
+        index_inserted = (dynamic_cast<ast_body *>(that_ast))->body.size();
         (dynamic_cast<ast_body *>(that_ast))->body.push_back(new AST{val});
       });
+      return index_inserted;
     };
 
     auto get_ast_scope = [&](std::vector<scope_element> scope) {  // returns a pointer to that ast
@@ -314,9 +317,36 @@ int main() {
             // double body statement
             ast_types::statement_with_two_bodies to_append;
             to_append.name = ast_types::string_t("if");
-            append_ast_scope(scope, to_append);
+            int appended_index = append_ast_scope(scope, to_append);
 
             std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::args);
+
+            while (program_tokens[itt].value != "(") {
+              itt = recursive_lex(itt, new_scope, 1);  // args lexing
+            }
+
+            new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::body);
+            itt = recursive_lex(itt, new_scope, 0);  // body lexing
+
+            if (look_ahead().value == "else") {
+              if (look_ahead().value == "if") {
+                new_scope = scope;
+                scope.push_back((scope_element)appended_index);
+                scope.push_back(scope_element::second_body);
+                itt = recursive_lex(--itt, new_scope, 0);  // else if body lexing
+              } else {
+                new_scope = scope;
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::second_body);
+                itt = recursive_lex(--itt, new_scope, 0);  // else body lexing
+              }
+            } else {
+              --itt;
+            }
           } else if (initial_token.value == "while" || initial_token.value == "foreach") {
             // single body statement
           } else if (initial_token.value == "return" || initial_token.value == "break" || initial_token.value == "continue") {
@@ -390,7 +420,7 @@ int main() {
     return itt;
   };
 
-  recursive_lex(-1, {scope_element::global});
+  recursive_lex(-1, {scope_element::global}, 0);
 
   return EXIT_SUCCESS;
 }
