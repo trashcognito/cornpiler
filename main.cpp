@@ -5,6 +5,7 @@
 #include <llvm-12/llvm/IR/Constants.h>
 #include <llvm-12/llvm/IR/Function.h>
 #include <llvm-12/llvm/IR/Type.h>
+#include <llvm-12/llvm/Support/CodeGen.h>
 #include <llvm-12/llvm/Support/raw_ostream.h>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/Triple.h>
@@ -27,6 +28,8 @@
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/Host.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <memory>
 #include <string>
@@ -36,8 +39,8 @@ std::unique_ptr<llvm::IRBuilder<>> Builder;
 std::unique_ptr<llvm::Module> TheModule;
 void init_module() {
     TheContext = std::make_unique<llvm::LLVMContext>();
-    Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
     TheModule = std::make_unique<llvm::Module>("cornpiler", *TheContext);
+    Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
 }
 class ASTValue;
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
@@ -45,23 +48,28 @@ static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 
 class ASTBase {
     public:
-    virtual void codegen();
+    virtual void codegen() {
+        //THIS SHOULD BE UNREACHABLE
+    };
     //virtual ~ASTBase();
 };
 
 class ASTValue {
     public:
-    virtual llvm::Value *codegen();
+    virtual llvm::Value *codegen() {
+        //THIS SHOULD BE UNREACHABLE
+        return nullptr;
+    };
     //virtual ~ASTValue();
 };
 using ASTValueArray=std::vector<ASTValue>;
 
-class ASTBaseVardef : ASTBase {
+class ASTBaseVardef : public ASTBase {
     public:
     std::string varname;
     ASTValue val;
     virtual void codegen() {
-        auto local = LocalScope.front();
+        auto local = LocalScope.back();
         auto value = val.codegen();
         auto var_storage = Builder->CreateAlloca(value->getType());
         Builder->CreateStore(value, var_storage);
@@ -72,7 +80,7 @@ class ASTBaseVardef : ASTBase {
         this->val = val;
     }
 };
-class ASTBaseCall : ASTBase {
+class ASTBaseCall : public ASTBase {
     public:
     std::string function_name;
     ASTValueArray argvector;
@@ -90,7 +98,7 @@ class ASTBaseCall : ASTBase {
     }
 };
 llvm::Value *resolve_var_scope(std::string key) {
-    for (std::vector<std::map<std::string, llvm::AllocaInst *>>::reverse_iterator it = LocalScope.rbegin(); it != LocalScope.rend(); ++it) {
+    for (auto it = LocalScope.rbegin(); it != LocalScope.rend(); ++it) {
         if (it->count(key)) {
             auto val = it->at(key);
             //auto type = val->getAllocatedType();
@@ -106,7 +114,7 @@ llvm::Value *resolve_var_scope(std::string key) {
     //TODO: Proper error message
     throw key;
 }
-class ASTBaseVarset : ASTBase {
+class ASTBaseVarset : public ASTBase {
     public:
     std::string name;
     ASTValue val;
@@ -119,7 +127,7 @@ class ASTBaseVarset : ASTBase {
         this->val = val;
     }
 };
-class ASTBody : ASTBase {
+class ASTBody : public ASTBase {
     public:
     std::vector<ASTBase> body;
     virtual void codegen() {
@@ -134,7 +142,7 @@ class ASTBody : ASTBase {
         this->body = body;
     }
 };
-class ASTWhile : ASTBase {
+class ASTWhile : public ASTBase {
     public:
     ASTBody body;
     ASTValue condition;
@@ -154,7 +162,7 @@ class ASTWhile : ASTBase {
         this->condition = condition;
     }
 };
-class ASTIf : ASTBase {
+class ASTIf : public ASTBase {
     public:
     ASTBody body_t;
     ASTBody body_f;
@@ -182,7 +190,7 @@ class ASTIf : ASTBase {
         this->condition = condition;
     }
 };
-class ASTReturnVal : ASTBase {
+class ASTReturnVal : public ASTBase {
     public:
     ASTValue val;
     virtual void codegen() {
@@ -192,7 +200,7 @@ class ASTReturnVal : ASTBase {
         this->val = val;
     }
 };
-class ASTReturnNull : ASTBase {
+class ASTReturnNull : public ASTBase {
     public:
     virtual void codegen() {
         Builder->CreateRetVoid();
@@ -201,9 +209,12 @@ class ASTReturnNull : ASTBase {
 class ASTType {
     public:
     std::string name;
-    virtual llvm::Type *get_type();
+    virtual llvm::Type *get_type() {
+        //THIS SHOULD BE UNREACHABLE
+        return nullptr;
+    };
 };
-class ASTIntType : ASTType {
+class ASTIntType : public ASTType {
     public:
     int bits;
     ASTIntType(int bits) {
@@ -213,7 +224,7 @@ class ASTIntType : ASTType {
         return llvm::IntegerType::get(*TheContext, this->bits);
     }
 };
-class ASTStringType : ASTType {
+class ASTStringType : public ASTType {
     public:
     int length;
     ASTStringType(int length) {
@@ -226,7 +237,7 @@ class ASTStringType : ASTType {
         );
     }
 };
-class ASTArrayType : ASTType {
+class ASTArrayType : public ASTType {
     public:
     int length;
     ASTType inside;
@@ -241,7 +252,7 @@ class ASTArrayType : ASTType {
         );
     }
 };
-class ASTPointerType : ASTType {
+class ASTPointerType : public ASTType {
     public:
     ASTType to;
     ASTPointerType(ASTType to) {
@@ -252,7 +263,7 @@ class ASTPointerType : ASTType {
         return to.get_type()->getPointerTo();
     }
 };
-class ASTFunctionType : ASTType {
+class ASTFunctionType : public ASTType {
     public:
     ASTType return_type;
     std::vector<ASTType> args;
@@ -272,7 +283,7 @@ class ASTFunctionType : ASTType {
     }
 };
 //TODO: split off ASTConst to different types to offload the work to the lexer?
-class ASTConst : ASTValue {
+class ASTConst : public ASTValue {
     public:
     ASTType type;
     std::string thing;
@@ -327,7 +338,7 @@ class ASTConst : ASTValue {
         this->thing = container;
     }
 };
-class ASTOperand : ASTValue {
+class ASTOperand : public ASTValue {
     public:
     enum Operand {
         LT,
@@ -499,7 +510,7 @@ class ASTOperand : ASTValue {
         this->op = op;
     }
 };
-class ASTValueCall : ASTValue {
+class ASTValueCall : public ASTValue {
     public:
     std::string function_name;
     ASTValueArray argvector;
@@ -518,7 +529,7 @@ class ASTValueCall : ASTValue {
         this->argvector = args;
     }
 };
-class ASTGetVar : ASTValue {
+class ASTGetVar : public ASTValue {
     public:
     std::string var_name;
     virtual llvm::Value *codegen() {
@@ -528,7 +539,7 @@ class ASTGetVar : ASTValue {
         this->var_name = name;
     }
 };
-class ASTGetVarPtr : ASTValue {
+class ASTGetVarPtr : public ASTValue {
     public:
     std::string var_name;
     virtual llvm::Value *codegen() {
@@ -538,7 +549,7 @@ class ASTGetVarPtr : ASTValue {
         this->var_name = name;
     }
 };
-class ASTUnaryOp : ASTValue {
+class ASTUnaryOp : public ASTValue {
     public:
     ASTValue arg;
     enum UOps {
@@ -557,11 +568,13 @@ class ASTUnaryOp : ASTValue {
 
 class ASTGlobalEntry {
     public:
-    virtual void codegen();
+    virtual void codegen() {
+        //THIS SHOULD BE UNREACHABLE
+    };
     std::string name;
 };
 //Extern declarations
-class ASTGlobalPrototype : ASTGlobalEntry {
+class ASTGlobalPrototype : public ASTGlobalEntry {
     public:
     ASTType type;
     bool constant;
@@ -581,12 +594,12 @@ class ASTGlobalPrototype : ASTGlobalEntry {
         }
     }
 };
-class ASTGlobalFunction : ASTGlobalEntry {
+class ASTGlobalFunction : public ASTGlobalEntry {
     public:
     ASTBody body;
     ASTFunctionType type;
-    std::vector<ASTType> args;
-    ASTGlobalFunction(std::string name,ASTFunctionType t, ASTBody body, std::vector<ASTType> args) : body(body), args(args), type(t) {
+    std::vector<std::string> args;
+    ASTGlobalFunction(std::string name,ASTFunctionType t, ASTBody body, std::vector<std::string> args) : body(body), args(args), type(t) {
         this->name = name;
     };
     virtual void codegen() {
@@ -597,7 +610,16 @@ class ASTGlobalFunction : ASTGlobalEntry {
         }
         llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, name, prototype);
         Builder->SetInsertPoint(BB);
+        LocalScope.emplace(LocalScope.end());
+        int arg_offset = 0;
+        auto local = LocalScope.back();
+        for (auto arg = prototype->arg_begin(); arg != prototype->arg_end(); arg++) {
+            auto alloca = Builder->CreateAlloca(arg->getType());
+            Builder->CreateStore(arg, alloca);
+            local[args[arg_offset]] = alloca;
+        }
         body.codegen();
+        LocalScope.pop_back();
     }
 };
 int main(int argc, char *argv[]) {
@@ -607,6 +629,45 @@ int main(int argc, char *argv[]) {
     auto target_triple = llvm::Triple(triple_name_str);
 
     init_module();
+    //TODO: Fill this up with the program
+    std::vector<ASTGlobalEntry> program;
+
+    //example program
+    //TODO: get an actual program here
+    auto args = std::vector<ASTType>();
+    auto argnames = std::vector<std::string>();
+    argnames.push_back("one");
+    argnames.push_back("two");
+    args.push_back(ASTIntType(64));
+    args.push_back(ASTIntType(64));
+    auto body = std::vector<ASTBase>();
+    body.push_back(
+        ASTReturnVal(
+            ASTOperand(
+                ASTGetVar("one"), 
+                ASTGetVar("two"), 
+                ASTOperand::ADD)
+        )
+    );
+    program.push_back(ASTGlobalFunction(
+        "add",
+        ASTFunctionType(
+            "add",
+            args,
+            ASTIntType(64)
+        ),
+        ASTBody(
+            body
+        ),
+        argnames
+    ));
+
+    //PROGRAM CODEGEN
+    for (auto entry = program.begin(); entry != program.end(); entry++) {
+        entry->codegen();
+    }
+
+
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
@@ -619,10 +680,34 @@ int main(int argc, char *argv[]) {
         llvm::errs() << Error;
         return -1;
     }
+    TheModule->setTargetTriple(triple_name_str);
+    //Boilerplate ELF emitter code from https://www.llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl08.html
+    auto CPU = "generic";
+    auto Features = "";
+    llvm::TargetOptions opt;
+    auto RM = llvm::Optional<llvm::Reloc::Model>();
+    auto TheTargetMachine = target->createTargetMachine(triple_name_str, CPU, Features, opt, RM);
+    TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    //TODO: Fill this up with the program
-    std::vector<ASTGlobalEntry> program;
+    //TODO: get output file name
+    auto outfile = "output.o";
+    std::error_code EC;
+    llvm::raw_fd_ostream dest(outfile, EC, llvm::sys::fs::OF_None);
 
-    //TODO: Emit to source file
-    std::cout << "made target somehow";
+  if (EC) {
+    llvm::errs() << "Could not open file: " << EC.message();
+    return 1;
+  }
+
+  llvm::legacy::PassManager pass;
+  auto FileType = llvm::CGFT_ObjectFile;
+
+  if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+    llvm::errs() << "TheTargetMachine can't emit a file of this type";
+    return 1;
+  }
+
+  pass.run(*TheModule);
+  dest.flush();
+  return 0;
 }
