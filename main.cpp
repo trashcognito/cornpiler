@@ -70,7 +70,7 @@ class ASTBaseVardef : public ASTBase {
     public:
     std::string varname;
     ASTValue val;
-    virtual void codegen() {
+    void codegen() {
         auto local = LocalScope.back();
         auto value = val.codegen();
         auto var_storage = Builder->CreateAlloca(value->getType());
@@ -86,7 +86,7 @@ class ASTBaseCall : public ASTBase {
     public:
     std::string function_name;
     ASTValueArray argvector;
-    virtual void codegen() {
+    void codegen() {
         auto fun = TheModule->getFunction(function_name);
         std::vector<llvm::Value *> args;
         for (ASTValueArray::iterator i = argvector.begin(); i != argvector.end(); ++i) {
@@ -120,7 +120,7 @@ class ASTBaseVarset : public ASTBase {
     public:
     std::string name;
     ASTValue val;
-    virtual void codegen() {
+    void codegen() {
         auto location = resolve_var_scope(name);
         Builder->CreateStore(val.codegen(), location);
     }
@@ -132,7 +132,7 @@ class ASTBaseVarset : public ASTBase {
 class ASTBody : public ASTBase {
     public:
     std::vector<ASTBase> body;
-    virtual void codegen() {
+    void codegen() {
         //Creates a new local scope
         LocalScope.emplace(LocalScope.end());
         for (auto it = body.begin(); it != body.end(); ++it) {
@@ -148,7 +148,7 @@ class ASTWhile : public ASTBase {
     public:
     ASTBody body;
     ASTValue condition;
-    virtual void codegen() {
+    void codegen() {
         auto while_start = llvm::BasicBlock::Create(*TheContext);
         auto while_body = llvm::BasicBlock::Create(*TheContext);
         auto while_end = llvm::BasicBlock::Create(*TheContext);
@@ -169,7 +169,7 @@ class ASTIf : public ASTBase {
     ASTBody body_t;
     ASTBody body_f;
     ASTValue condition;
-    virtual void codegen() {
+    void codegen() {
         auto if_start = llvm::BasicBlock::Create(*TheContext);
         auto if_body = llvm::BasicBlock::Create(*TheContext);
         auto if_else = llvm::BasicBlock::Create(*TheContext);
@@ -195,7 +195,7 @@ class ASTIf : public ASTBase {
 class ASTReturnVal : public ASTBase {
     public:
     ASTValue val;
-    virtual void codegen() {
+    void codegen() {
         Builder->CreateRet(val.codegen());
     }
     ASTReturnVal(ASTValue val) {
@@ -204,7 +204,7 @@ class ASTReturnVal : public ASTBase {
 };
 class ASTReturnNull : public ASTBase {
     public:
-    virtual void codegen() {
+    void codegen() {
         Builder->CreateRetVoid();
     }
 };
@@ -223,7 +223,7 @@ class ASTIntType : public ASTType {
     ASTIntType(int bits) {
         this->bits = bits;
     }
-    virtual llvm::Type *get_type() {
+    llvm::Type *get_type() {
         return llvm::IntegerType::get(*TheContext, this->bits);
     }
 };
@@ -233,7 +233,7 @@ class ASTStringType : public ASTType {
     ASTStringType(int length) {
         this->length = length;
     };
-    virtual llvm::Type *get_type() {
+    llvm::Type *get_type() {
         return llvm::ArrayType::get(
             llvm::IntegerType::getInt8Ty(*TheContext),
             this->length
@@ -248,7 +248,7 @@ class ASTArrayType : public ASTType {
         this->inside = inside;
         this->length = len;
     }
-    virtual llvm::Type *get_type() {
+    llvm::Type *get_type() {
         return llvm::ArrayType::get(
             inside.get_type(),
             length
@@ -261,7 +261,7 @@ class ASTPointerType : public ASTType {
     ASTPointerType(ASTType to) {
         this->to = to;
     }
-    virtual llvm::Type *get_type() {
+    llvm::Type *get_type() {
         //TODO: do addrspace to const the pointer?
         return to.get_type()->getPointerTo();
     }
@@ -277,7 +277,7 @@ class ASTFunctionType : public ASTType {
         this->return_type = return_type;
         this->varargs = varargs;
     }
-    virtual llvm::Type *get_type() {
+    llvm::Type *get_type() {
         std::vector<llvm::Type *> arg_types;
         for (std::vector<ASTType>::iterator it=this->args.begin(); it != this->args.end(); it++) {
             arg_types.push_back((*it).get_type());
@@ -290,7 +290,7 @@ class ASTConst : public ASTValue {
     public:
     ASTType type;
     std::string thing;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         auto t = type.get_type();
         switch(t->getTypeID()) {
             //case llvm::Type::HalfTyID : 
@@ -364,7 +364,7 @@ class ASTOperand : public ASTValue {
     Operand op;
     ASTValue arg1;
     ASTValue arg2;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         auto val1 = arg1.codegen();
         auto val2 = arg2.codegen();
         bool float_op = false;
@@ -517,7 +517,7 @@ class ASTValueCall : public ASTValue {
     public:
     std::string function_name;
     ASTValueArray argvector;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         //TODO: implement calling function from local scope?
         auto fun = TheModule->getFunction(function_name);
         std::vector<llvm::Value *> args;
@@ -535,7 +535,7 @@ class ASTValueCall : public ASTValue {
 class ASTGetVar : public ASTValue {
     public:
     std::string var_name;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         return Builder->CreateLoad(resolve_var_scope(var_name));
     }
     ASTGetVar(std::string name) {
@@ -545,7 +545,7 @@ class ASTGetVar : public ASTValue {
 class ASTGetVarPtr : public ASTValue {
     public:
     std::string var_name;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         return resolve_var_scope(var_name);
     }
     ASTGetVarPtr(std::string name) {
@@ -559,7 +559,7 @@ class ASTUnaryOp : public ASTValue {
         NOT
     };
     UOps op;
-    virtual llvm::Value *codegen() {
+    llvm::Value *codegen() {
         auto val = arg.codegen();
         switch (op) {
             case NOT:
@@ -587,7 +587,7 @@ class ASTGlobalPrototype : public ASTGlobalEntry {
         this->type = type;
         this->constant = is_constant;
     }
-    virtual void codegen() {
+    void codegen() {
         auto t = this->type.get_type();
         if (t->isFunctionTy()) {
             auto f = llvm::Function::Create(static_cast<llvm::FunctionType *>(t), llvm::GlobalValue::ExternalLinkage, name, *TheModule);
@@ -606,7 +606,7 @@ class ASTGlobalFunction : public ASTGlobalEntry {
     ASTGlobalFunction(std::string name,ASTFunctionType t, ASTBody body, std::vector<std::string> args) : body(body), args(args), type(t) {
         this->name = name;
     };
-    virtual void codegen() {
+    void codegen() {
         auto prototype = TheModule->getFunction(name);
         if (!prototype) {
             //TODO: the static cast here may break stuff and segfault, simply split away the function declaration if this happens
