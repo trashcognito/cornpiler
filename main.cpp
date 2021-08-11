@@ -51,12 +51,12 @@ class ASTBaseCall : ASTBase {
     std::string function_name;
     std::vector<ASTValue> argvector;
     virtual void codegen() {
-        auto type = GlobalScope[function_name].getValueType();
+        auto type = GlobalScope.at(function_name).getValueType();
         std::vector<llvm::Value *> args;
         for (std::vector<ASTValue>::iterator i = argvector.begin(); i != argvector.end(); ++i) {
             args.push_back(i->codegen());
         }
-        Builder.CreateCall((llvm::FunctionType *) type, (llvm::Value *)&GlobalScope[function_name], args);
+        Builder.CreateCall((llvm::FunctionType *) type, (llvm::Value *)&GlobalScope.at(function_name), args);
     }
     ASTBaseCall(std::string name, std::vector<ASTValue> args) {
         this->function_name = name;
@@ -74,7 +74,7 @@ llvm::Value *resolve_var_scope(std::string key) {
     }
     if (GlobalScope.count(key)) {
         //TODO: Global variables are probably broken, global variables are most likely going to get pointerized
-        return &GlobalScope[key];
+        return &GlobalScope.at(key);
     }
     //TODO: Proper error message
     throw key;
@@ -359,12 +359,12 @@ class ASTValueCall : ASTValue {
     std::vector<ASTValue> argvector;
     virtual llvm::Value *codegen() {
         //TODO: implement calling function from local scope?
-        auto type = GlobalScope[function_name].getValueType();
+        auto type = GlobalScope.at(function_name).getValueType();
         std::vector<llvm::Value *> args;
         for (std::vector<ASTValue>::iterator i = argvector.begin(); i != argvector.end(); ++i) {
             args.push_back(i->codegen());
         }
-        return Builder.CreateCall((llvm::FunctionType *) type, (llvm::Value *)&GlobalScope[function_name], args);
+        return Builder.CreateCall((llvm::FunctionType *) type, (llvm::Value *)&GlobalScope.at(function_name), args);
     }
     ASTValueCall(std::string name, std::vector<ASTValue> args) {
         this->function_name = name;
