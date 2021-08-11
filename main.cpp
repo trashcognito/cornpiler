@@ -48,20 +48,26 @@ static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 
 class ASTBase {
     public:
+    /*
     virtual void codegen() {
         llvm::errs() << "UNREACHABLE CODE REACHED ASTBase";
         //THIS SHOULD BE UNREACHABLE
     };
+    */
+    virtual void codegen() = 0;
     //virtual ~ASTBase();
 };
 
 class ASTValue {
     public:
+    /*
     virtual llvm::Value *codegen() {
         llvm::errs() << "UNREACHABLE CODE REACHED ASTValue";
         //THIS SHOULD BE UNREACHABLE
         return nullptr;
     };
+    */
+    virtual llvm::Value *codegen() = 0;
     //virtual ~ASTValue();
 };
 using ASTValueArray=std::vector<ASTValue>;
@@ -69,7 +75,7 @@ using ASTValueArray=std::vector<ASTValue>;
 class ASTBaseVardef : public ASTBase {
     public:
     std::string varname;
-    ASTValue val;
+    ASTValue &val;
     void codegen() {
         auto local = LocalScope.back();
         auto value = val.codegen();
@@ -77,9 +83,8 @@ class ASTBaseVardef : public ASTBase {
         Builder->CreateStore(value, var_storage);
         local[varname] = var_storage;
     }
-    ASTBaseVardef(std::string varname, ASTValue val) {
+    ASTBaseVardef(std::string varname, ASTValue &val) : val(val) {
         this->varname = varname;
-        this->val = val;
     }
 };
 class ASTBaseCall : public ASTBase {
@@ -119,14 +124,13 @@ llvm::Value *resolve_var_scope(std::string key) {
 class ASTBaseVarset : public ASTBase {
     public:
     std::string name;
-    ASTValue val;
+    ASTValue &val;
     void codegen() {
         auto location = resolve_var_scope(name);
         Builder->CreateStore(val.codegen(), location);
     }
-    ASTBaseVarset(std::string name, ASTValue val) {
+    ASTBaseVarset(std::string name, ASTValue &val) : val(val) {
         this->name = name;
-        this->val = val;
     }
 };
 class ASTBody : public ASTBase {
@@ -147,7 +151,7 @@ class ASTBody : public ASTBase {
 class ASTWhile : public ASTBase {
     public:
     ASTBody body;
-    ASTValue condition;
+    ASTValue &condition;
     void codegen() {
         auto while_start = llvm::BasicBlock::Create(*TheContext);
         auto while_body = llvm::BasicBlock::Create(*TheContext);
@@ -160,15 +164,13 @@ class ASTWhile : public ASTBase {
         Builder->CreateBr(while_start);
         Builder->SetInsertPoint(while_end);
     };
-    ASTWhile(ASTBody body_a, ASTValue condition) : body(body_a) {
-        this->condition = condition;
-    }
+    ASTWhile(ASTBody body_a, ASTValue &condition) : body(body_a), condition(condition) {}
 };
 class ASTIf : public ASTBase {
     public:
     ASTBody body_t;
     ASTBody body_f;
-    ASTValue condition;
+    ASTValue &condition;
     void codegen() {
         auto if_start = llvm::BasicBlock::Create(*TheContext);
         auto if_body = llvm::BasicBlock::Create(*TheContext);
@@ -188,19 +190,15 @@ class ASTIf : public ASTBase {
 
         Builder->SetInsertPoint(if_end);
     }
-    ASTIf(ASTBody body_if,ASTBody body_else, ASTValue condition) : body_t(body_if), body_f(body_else) {
-        this->condition = condition;
-    }
+    ASTIf(ASTBody body_if,ASTBody body_else, ASTValue &condition) : body_t(body_if), body_f(body_else), condition(condition) {}
 };
 class ASTReturnVal : public ASTBase {
     public:
-    ASTValue val;
+    ASTValue &val;
     void codegen() {
         Builder->CreateRet(val.codegen());
     }
-    ASTReturnVal(ASTValue val) {
-        this->val = val;
-    }
+    ASTReturnVal(ASTValue &val) : val(val) {}
 };
 class ASTReturnNull : public ASTBase {
     public:
@@ -362,8 +360,8 @@ class ASTOperand : public ASTValue {
         BOOL_AND
     };
     Operand op;
-    ASTValue arg1;
-    ASTValue arg2;
+    ASTValue &arg1;
+    ASTValue &arg2;
     llvm::Value *codegen() {
         auto val1 = arg1.codegen();
         auto val2 = arg2.codegen();
@@ -507,9 +505,7 @@ class ASTOperand : public ASTValue {
             }
         }
     }
-    ASTOperand(ASTValue lhs, ASTValue rhs, Operand op) {
-        this->arg1 = lhs;
-        this->arg2 = rhs;
+    ASTOperand(ASTValue &lhs, ASTValue &rhs, Operand op) : arg1(lhs), arg2(rhs) {
         this->op = op;
     }
 };
@@ -554,7 +550,7 @@ class ASTGetVarPtr : public ASTValue {
 };
 class ASTUnaryOp : public ASTValue {
     public:
-    ASTValue arg;
+    ASTValue &arg;
     enum UOps {
         NOT
     };
@@ -566,6 +562,9 @@ class ASTUnaryOp : public ASTValue {
                 return Builder->CreateNot(val);
             break;
         }
+    }
+    ASTUnaryOp(UOps operand, ASTValue &arg) : arg(arg) {
+        this->op = operand;
     }
 };
 
