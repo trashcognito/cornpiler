@@ -2,9 +2,9 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <vector>
-#include <functional>
 
 bool check_id_constraints(std::string id, char c) {
   bool retval = isalpha(c) || c == '_';
@@ -185,7 +185,7 @@ std::vector<token> tokenize_program(char *program, int length) {
 
 #ifdef DEBUG
   for (auto &t : status.tokens) {
-    std::cout << "Token: " << t.value << "\t\t\tType: " << DEBUG_TOKEN_TYPES[t.type] << std::endl;
+    std::cout << "Token: " << t.value << "\t\t\tType: " << DEBUG_TOKEN_TYPES[(int)t.type] << std::endl;
   }
 #endif
 
@@ -218,35 +218,45 @@ int main() {
   auto recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode = 0) {  // returns the new itt
 
 #pragma region
-    auto goto_ast_scope = [&](std::function<void(AST *)> call_after_finished){
-            std::vector<scope_element> current_scope = scope;
+    auto goto_ast_scope = [&](std::vector<scope_element> in_scope, std::function<void(AST *)> call_after_finished) {
       AST *that_ast = &(globals.global);
       int scope_size = scope.size();
       int scope_i = 0;
-      for (auto s : scope) {   // copy, do not reference
-        if (s.index() == 0) {  // int
-          that_ast = (((ast_body *)that_ast)->body)[std::get<int>(s)];
+      for (auto s : in_scope) {  // copy, do not reference
+        if ((int)s >= 0) {            // int
+          that_ast = ((dynamic_cast<ast_body *>(that_ast))->body)[(int)s];
         } else {
-          std::string s_name = std::get<std::string>(s);
-          if(s_name == "global"){
-            that_ast = &(((ast_types::global_scope *)that_ast)->global);
-          }else if(s_name == "args"){
-            that_ast = &(((ast_types::with_args *)that_ast)->args);
-          }else if(s_name == "body"){
-            that_ast = &(((ast_types::with_body *)that_ast)->body);
-          }else if(s_name == "second_body"){
-            that_ast = &(((ast_types::with_second_body *)that_ast)->second_body);
-          }else if(s_name == "type"){
-            that_ast = &(((ast_types::with_type *)that_ast)->type);
-          }else if(s_name == "return_type"){
-            that_ast = &(((ast_types::with_return_type *)that_ast)->return_type);
-          }else if(s_name == "arr_index"){
-            that_ast = &(((ast_types::arrget *)that_ast)->index);
-          }else if(s_name == "arr_array"){
-            that_ast = &(((ast_types::arrget *)that_ast)->array);
+          switch ((scope_element)s) {
+            case scope_element::global:
+              that_ast = &((dynamic_cast<ast_types::global_scope *>(that_ast))->global);
+              break;
+            case scope_element::args:
+              that_ast = &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
+              break;
+            case scope_element::body:
+              that_ast = &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
+              break;
+            case scope_element::second_body:
+              that_ast = &((dynamic_cast<ast_types::with_second_body *>(that_ast))->second_body);
+              break;
+            case scope_element::type:
+              that_ast = &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
+              break;
+            case scope_element::return_type:
+              that_ast = &((dynamic_cast<ast_types::with_return_type *>(that_ast))->return_type);
+              break;
+            case scope_element::arr_index:
+              that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->index);
+              break;
+            case scope_element::arr_array:
+              that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
+              break;
+            default:
+              std::cout << "Error: invalid scope element" << std::endl;
+              exit(0);
           }
         }
-        if(scope_size -1 >= ++scope_i){
+        if (scope_size - 1 >= ++scope_i) {
           // *that_ast = val;
           call_after_finished(that_ast);
         }
@@ -254,20 +264,20 @@ int main() {
     };
 
     auto set_ast_scope = [&](std::vector<scope_element> scope, AST val) {
-      goto_ast_scope([&](AST *that_ast){
+      goto_ast_scope(scope, [&](AST *that_ast) {
         *that_ast = val;
       });
     };
 
     auto append_ast_scope = [&](std::vector<scope_element> scope, AST val) {
-      goto_ast_scope([&](AST *that_ast){
-        ((ast_body*)that_ast)->body.push_back(new AST{val});
+      goto_ast_scope(scope, [&](AST *that_ast) {
+        (dynamic_cast<ast_body *>(that_ast))->body.push_back(new AST{val});
       });
     };
 
-    auto get_ast_scope = [&](std::vector<scope_element> scope){ // returns a pointer to that ast
+    auto get_ast_scope = [&](std::vector<scope_element> scope) {  // returns a pointer to that ast
       AST *retval;
-      goto_ast_scope([&](AST *that_ast){
+      goto_ast_scope(scope, [&](AST *that_ast) {
         retval = that_ast;
       });
       return retval;
@@ -277,8 +287,8 @@ int main() {
 
     int last_seen_op = -1;
 
-    int itt = old_itt;
-    for (; itt < program_tokens.size(); itt++) {
+    int itt;
+    for (itt = old_itt; itt < program_tokens.size(); itt++) {
       auto look_ahead = [&](int count = 1) {
         itt += count;
         if (itt >= is_length) {
@@ -302,6 +312,11 @@ int main() {
         case token_type::identifier: {
           if (initial_token.value == "if") {
             // double body statement
+            ast_types::statement_with_two_bodies to_append;
+            to_append.name = ast_types::string_t("if");
+            append_ast_scope(scope, to_append);
+
+            std::vector<scope_element> new_scope = scope;
           } else if (initial_token.value == "while" || initial_token.value == "foreach") {
             // single body statement
           } else if (initial_token.value == "return" || initial_token.value == "break" || initial_token.value == "continue") {
@@ -375,7 +390,7 @@ int main() {
     return itt;
   };
 
-  recursive_lex(-1, {"globals"});
+  recursive_lex(-1, {scope_element::global});
 
   return EXIT_SUCCESS;
 }
