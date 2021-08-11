@@ -186,9 +186,10 @@ class vardef : public with_args, public with_type, public AST_node {
   }
 };
 
-class type : public with_type, public AST_node {
+class in_type : public AST_node, public AST {
  public:
-  type() {
+  string_t type;
+  in_type() {
     act = act_type::type;
   }
 };
@@ -196,8 +197,10 @@ class type : public with_type, public AST_node {
 class out_type : public with_type, public AST_node {
  public:
   string_t name;
+  number_t length;
   out_type() {
     act = act_type::outtype;
+    length = -1;
   }
 };
 

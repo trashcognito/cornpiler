@@ -349,34 +349,98 @@ int main() {
             }
           } else if (initial_token.value == "while" || initial_token.value == "foreach") {
             // single body statement
+            ast_types::statement_with_body to_append;
+            to_append.name = ast_types::string_t(initial_token.value);
+            int appended_index = append_ast_scope(scope, to_append);
+
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::args);
+
+            while (program_tokens[itt].value != "(") {
+              itt = recursive_lex(itt, new_scope, 1);  // args lexing
+            }
+
+            new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::body);
+            itt = recursive_lex(itt, new_scope, 0);  // body lexing
           } else if (initial_token.value == "return" || initial_token.value == "break" || initial_token.value == "continue") {
             // statement
+            ast_types::statement to_append;
+            to_append.name = ast_types::string_t(initial_token.value);
+            int appended_index = append_ast_scope(scope, to_append);
+
+            if (look_ahead().value == "(") {
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::args);
+              recursive_lex(itt, new_scope, 1);  // args lexing
+            }else{
+              --itt;
+            }
           } else if (initial_token.value == "deref" || initial_token.value == "ref") {
             // varop
-          } else if (initial_token.value == "var" || initial_token.value == "glvar") {  // TODO: autodetect glvar and deprecate it
+            ast_types::varop to_append;
+            to_append.name = ast_types::string_t(initial_token.value);
+            to_append.var = ast_types::string_t(look_ahead().value);
+            append_ast_scope(scope, to_append);
+          } else if (initial_token.value == "var") {
             // vardef
-          } else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
+            ast_types::vardef to_append;
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
+            new_scope.push_back(scope_element::type);
+            itt = recursive_lex(itt, new_scope, 3);  // var type lexing
+            to_append.name = ast_types::string_t(look_ahead().value);
+            append_ast_scope(scope, to_append);
+          } else if(initial_token.value == "glvar"){  // TODO: autodetect glvar and deprecate it
+            //gldef
+            ast_types::glbdef to_append;
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
+            new_scope.push_back(scope_element::type);
+            itt = recursive_lex(itt, new_scope, 4);  // var type lexing // I MAY BE WRONG HERE, THIS MIGHT NEED TO BE 3
+            to_append.name = ast_types::string_t(look_ahead().value);
+            append_ast_scope(scope, to_append);
+          }else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
             // outer type
+            ast_types::out_type to_append;
+            to_append.name = initial_token.value; // wait this works lmao so let me get this straight: it can convert
+                                                  // a type to a class with no default constructor, but it can't convert
+                                                  // an int enum to a fucking int. c'mon.
+                                                  // cpp amirite
+            if(initial_token.value == "arr"){
+              to_append.length = std::stoi(look_ahead().value); // TODO: make this in square brackets and parse it as args
+            }
+
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
+            new_scope.push_back(scope_element::type);
+
+            itt = recursive_lex(itt, new_scope, 4);  // type lexing
           } else if (initial_token.value == "str" || initial_token.value == "bool" || initial_token.value == "byte" || initial_token.value == "word" || initial_token.value == "int" || initial_token.value == "int64" || initial_token.value == "int128" || initial_token.value == "float") {
-            // inner type
+            ast_types::in_type to_append;
+            to_append.type = initial_token.value;
+            append_ast_scope(scope, to_append);
           } else if (initial_token.value == "fun") {
             // have FUN! jk function
-          } else if (initial_token.value == "ext") {  // todo: autodetect and deprecate
+          } else if (initial_token.value == "ext") {  // TODO: autodetect and deprecate
             // external function
           } else {
-            look_ahead(1);
+            look_ahead();
             if (program_tokens[itt].value == "(") {
               // function call
             } else {
               // this should be a variable
-              // since we have already incremented the itt, we can check whether it is a definition or a reference right away
+              // since we have already incremented itt, we can check whether it is a definition or a reference right away
               if (program_tokens[itt].value == "=" || program_tokens[itt].value[1] == '=') {
                 // definition
                 token operation = program_tokens[itt];
                 token var_name = program_tokens[itt - 1];
               } else {
                 // reference
-                itt -= 1;
+                --itt;
               }
             }
           }
