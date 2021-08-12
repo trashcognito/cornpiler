@@ -234,7 +234,7 @@ namespace ast {
         Body *body;
         FunctionType *type;
         std::vector<std::string> args;
-        GlobalFunction(std::string name,FunctionType *t, Body *body, std::vector<std::string> args);
+        GlobalFunction(FunctionType *t, Body *body, std::vector<std::string> args);
         void codegen() const;
     };
 }

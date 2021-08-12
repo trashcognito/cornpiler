@@ -463,11 +463,11 @@ namespace ast {
         }
     }
 
-    GlobalFunction::GlobalFunction(std::string name,FunctionType *t, Body *body, std::vector<std::string> args) {
+    GlobalFunction::GlobalFunction(FunctionType *t, Body *body, std::vector<std::string> args) {
         this->type = t;
         this->body = body;
         this->args = args;
-        this->name = name;
+        this->name = t->name;
     };
     void GlobalFunction::codegen() const {
         auto prototype = TheModule->getFunction(name);

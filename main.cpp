@@ -30,7 +30,6 @@ std::vector<ast::GlobalEntry *> get_program() {
     //TODO: unspaghettify the references to unspaghettify the example code
     return std::vector<ast::GlobalEntry *> ({
         new ast::GlobalFunction(
-        "add",
         new ast::FunctionType(
             "add",
             std::vector<ast::Type *>(
