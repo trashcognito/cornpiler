@@ -121,7 +121,6 @@ std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m)
 //************
 llvm::Value *resolve_var_scope(std::string key) {
 
-
     for (auto it = LocalScope.rbegin(); it != LocalScope.rend(); ++it) {
 
         std::cout << "SCOPE: " << *it << "\n";
