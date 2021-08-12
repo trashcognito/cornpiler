@@ -23,6 +23,7 @@ enum class scope_element : int {
   arr_index = -7,
   arr_array = -8,
   argtype = -9,
+  out_length = -10,
 };
 
 enum class token_type {
@@ -58,6 +59,20 @@ enum class act_type {
   outtype
 };
 
+class entry_bracket {
+  public:
+    char first;
+    char second;
+    entry_bracket(char f, char s){
+      first = f;
+      second = s;
+    }
+    entry_bracket(){
+      first = 0;
+      second = 0;
+    }
+};
+
 class token {
  public:
   token_type type;
@@ -86,6 +101,42 @@ class ast_body : virtual public AST {
 };
 
 namespace ast_types {
+
+#pragma region
+class string_t : virtual public AST {
+ public:
+  std::string value;
+  string_t(){
+    value = "";
+  }
+  string_t(std::string v){
+    value = v;
+  }
+  string_t(char v){
+    value = std::string(1, v);
+  }
+};
+class char_t : virtual public AST {
+ public:
+  char value;
+  char_t(){
+    value = '\0';
+  };
+  char_t(char v){
+    value = v;
+  }
+};
+class number_t : virtual public AST {
+ public:
+  int value;
+  number_t(){
+    value = 0;
+  }
+  number_t(int v){
+    value = v;
+  }
+};
+#pragma endregion standard_types_as_ast
 
 #pragma region
 class with_args : virtual public AST {
@@ -121,39 +172,6 @@ class with_args_with_type : virtual public AST {
     ast_body args;
 };
 #pragma endregion ast_global_types
-
-#pragma region
-class string_t : virtual public AST {
- public:
-  std::string value;
-  string_t(){
-    value = "";
-  }
-  string_t(std::string v){
-    value = v;
-  }
-};
-class char_t : virtual public AST {
- public:
-  char value;
-  char_t(){
-    value = '\0';
-  };
-  char_t(char v){
-    value = v;
-  }
-};
-class number_t : virtual public AST {
- public:
-  int value;
-  number_t(){
-    value = 0;
-  }
-  number_t(int v){
-    value = v;
-  }
-};
-#pragma endregion standard_types_as_ast
 
 
 class global_scope : virtual public AST {
@@ -283,7 +301,7 @@ class const_int : virtual public AST, public AST_node {
 
 class oper : public with_args, public AST_node {
  public:
-  char_t op;
+  string_t op;
   oper() {
     act = act_type::oper;
   }
@@ -297,6 +315,7 @@ class expr : public with_args, public AST_node {
 };
 
 class arrset : public with_args, public AST_node {
+  public:
   arrset() {
     act = act_type::arrset;
   }
@@ -304,8 +323,8 @@ class arrset : public with_args, public AST_node {
 
 class arrget : virtual public AST, public AST_node {
  public:
-  AST index;
-  AST array;
+  ast_body index;
+  ast_body array;
   arrget() {
     act = act_type::arrget;
   }
