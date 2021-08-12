@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <llvm-12/llvm/Analysis/CGSCCPassManager.h>
+#include <llvm-12/llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -7,6 +9,12 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Target/TargetLoweringObjectFile.h>
 
 #include <memory>
 #include <ostream>
@@ -93,6 +101,24 @@ int main(int argc, char *argv[]) {
     auto RM = llvm::Optional<llvm::Reloc::Model>();
     auto TheTargetMachine = target->createTargetMachine(triple_name_str, CPU, Features, opt, RM);
     TheModule->setDataLayout(TheTargetMachine->createDataLayout());
+
+    //OPTIMIZATION PASSES
+    llvm::PassBuilder pb;
+    llvm::LoopAnalysisManager lam(true);
+    llvm::FunctionAnalysisManager fam(true);
+    llvm::CGSCCAnalysisManager cgsccam(true);
+    llvm::ModuleAnalysisManager mam(true);
+
+    pb.registerModuleAnalyses(mam);
+    pb.registerCGSCCAnalyses(cgsccam);
+    pb.registerFunctionAnalyses(fam);
+    pb.registerLoopAnalyses(lam);
+
+    pb.crossRegisterProxies(lam, fam, cgsccam, mam);
+
+    llvm::ModulePassManager module_pass_manager = pb.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O2);
+
+    module_pass_manager.run(*TheModule, mam);
 
     //TODO: get output file name
     auto outfile = "output.o";

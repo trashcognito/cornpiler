@@ -21,10 +21,6 @@
 #include <llvm/IR/GlobalObject.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetLoweringObjectFile.h>
 
 extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
