@@ -25,39 +25,37 @@ void init_module() {
 }
 
 std::vector<ast::GlobalEntry *> get_program() {
-    std::vector<ast::GlobalEntry *> program;
     //example program
     //TODO: get an actual program here
-    auto args = std::vector<ast::Type *>();
-    auto argnames = std::vector<std::string>();
-    argnames.push_back("one");
-    argnames.push_back("two");
-    args.push_back(new ast::IntType(64));
-    args.push_back(new ast::IntType(64));
-    auto body = std::vector<ast::Base *>();
-    
     //TODO: unspaghettify the references to unspaghettify the example code
-    body.push_back(
-        new ast::ReturnVal(
+    return std::vector<ast::GlobalEntry *> ({
+        new ast::GlobalFunction(
+        "add",
+        new ast::FunctionType(
+            "add",
+            std::vector<ast::Type *>(
+                {
+                    new ast::IntType(64), 
+                    new ast::IntType(64)
+                }
+            ),
+            new ast::IntType(64)
+        ),
+        new ast::Body(
+            std::vector<ast::Base *>({new ast::ReturnVal(
             new ast::Operand(
                 new ast::GetVar("one"), 
                 new ast::GetVar("two"), 
                 ast::Operand::ADD)
+            )})
+        ),
+        std::vector<std::string>(
+            {
+                "one", 
+                "two"
+            }
         )
-    );
-    program.push_back(new ast::GlobalFunction(
-        "add",
-        new ast::FunctionType(
-            "add",
-            args,
-            new ast::IntType(64)
-        ),
-        new ast::Body(
-            body
-        ),
-        argnames
-    ));
-    return program;
+    )});
 }
 
 int main(int argc, char *argv[]) {
