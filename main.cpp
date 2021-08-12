@@ -76,15 +76,16 @@ using ASTValueArray=std::vector<ASTValue *>;
 class ASTBaseVardef : public ASTBase {
     public:
     std::string varname;
-    ASTValue &val;
+    ASTValue *val;
     void codegen() {
         auto local = LocalScope.back();
-        auto value = val.codegen();
+        auto value = val->codegen();
         auto var_storage = Builder->CreateAlloca(value->getType());
         Builder->CreateStore(value, var_storage);
         local[varname] = var_storage;
     }
-    ASTBaseVardef(std::string varname, ASTValue &val) : val(val) {
+    ASTBaseVardef(std::string varname, ASTValue *val) {
+        this->val = val;
         this->varname = varname;
     }
 };
@@ -144,12 +145,13 @@ llvm::Value *resolve_var_scope(std::string key) {
 class ASTBaseVarset : public ASTBase {
     public:
     std::string name;
-    ASTValue &val;
+    ASTValue *val;
     void codegen() {
         auto location = resolve_var_scope(name);
-        Builder->CreateStore(val.codegen(), location);
+        Builder->CreateStore(val->codegen(), location);
     }
-    ASTBaseVarset(std::string name, ASTValue &val) : val(val) {
+    ASTBaseVarset(std::string name, ASTValue *val) {
+        this->val = val;
         this->name = name;
     }
 };
@@ -170,27 +172,30 @@ class ASTBody : public ASTBase {
 };
 class ASTWhile : public ASTBase {
     public:
-    ASTBody &body;
-    ASTValue &condition;
+    ASTBody *body;
+    ASTValue *condition;
     void codegen() {
         auto while_start = llvm::BasicBlock::Create(*TheContext);
         auto while_body = llvm::BasicBlock::Create(*TheContext);
         auto while_end = llvm::BasicBlock::Create(*TheContext);
         Builder->CreateBr(while_start);
         Builder->SetInsertPoint(while_start);
-        Builder->CreateCondBr(condition.codegen(), while_body, while_end);
+        Builder->CreateCondBr(condition->codegen(), while_body, while_end);
         Builder->SetInsertPoint(while_body);
-        body.codegen();
+        body->codegen();
         Builder->CreateBr(while_start);
         Builder->SetInsertPoint(while_end);
     };
-    ASTWhile(ASTBody &body_a, ASTValue &condition) : body(body_a), condition(condition) {}
+    ASTWhile(ASTBody *body_a, ASTValue *condition) {
+        this->body = body_a;
+        this->condition = condition;
+    }
 };
 class ASTIf : public ASTBase {
     public:
-    ASTBody &body_t;
-    ASTBody &body_f;
-    ASTValue &condition;
+    ASTBody *body_t;
+    ASTBody *body_f;
+    ASTValue *condition;
     void codegen() {
         auto if_start = llvm::BasicBlock::Create(*TheContext);
         auto if_body = llvm::BasicBlock::Create(*TheContext);
@@ -198,27 +203,33 @@ class ASTIf : public ASTBase {
         auto if_end = llvm::BasicBlock::Create(*TheContext);
         Builder->CreateBr(if_start);
         Builder->SetInsertPoint(if_start);
-        Builder->CreateCondBr(condition.codegen(), if_body, if_else);
+        Builder->CreateCondBr(condition->codegen(), if_body, if_else);
 
         Builder->SetInsertPoint(if_body);
-        body_t.codegen();
+        body_t->codegen();
         Builder->CreateBr(if_end);
 
         Builder->SetInsertPoint(if_else);
-        body_f.codegen();
+        body_f->codegen();
         Builder->CreateBr(if_end);
 
         Builder->SetInsertPoint(if_end);
     }
-    ASTIf(ASTBody &body_if,ASTBody &body_else, ASTValue &condition) : body_t(body_if), body_f(body_else), condition(condition) {}
+    ASTIf(ASTBody *body_if,ASTBody *body_else, ASTValue *condition) {
+        this->body_t = body_if;
+        this->body_f = body_else;
+        this->condition = condition;
+    }
 };
 class ASTReturnVal : public ASTBase {
     public:
-    ASTValue &val;
+    ASTValue *val;
     void codegen() const {
-        Builder->CreateRet(val.codegen());
+        Builder->CreateRet(val->codegen());
     }
-    ASTReturnVal(ASTValue &val) : val(val) {}
+    ASTReturnVal(ASTValue *val) {
+        this->val = val;
+    }
 };
 class ASTReturnNull : public ASTBase {
     public:
@@ -257,51 +268,55 @@ class ASTStringType : public ASTType {
 class ASTArrayType : public ASTType {
     public:
     int length;
-    ASTType &inside;
-    ASTArrayType(ASTType &inside, int len) : inside(inside) {
+    ASTType *inside;
+    ASTArrayType(ASTType *inside, int len) {
+        this->inside = inside;
         this->length = len;
     }
     llvm::Type *get_type() const {
         return llvm::ArrayType::get(
-            inside.get_type(),
+            inside->get_type(),
             length
         );
     }
 };
 class ASTPointerType : public ASTType {
     public:
-    ASTType &to;
-    ASTPointerType(ASTType &to) : to(to) {}
+    ASTType *to;
+    ASTPointerType(ASTType *to) {
+        this->to = to;
+    }
     llvm::Type *get_type() const {
         //TODO: do addrspace to const the pointer?
-        return to.get_type()->getPointerTo();
+        return to->get_type()->getPointerTo();
     }
 };
 class ASTFunctionType : public ASTType {
     public:
-    ASTType &return_type;
+    ASTType *return_type;
     std::vector<ASTType *> args;
     bool varargs;
-    ASTFunctionType(std::string name, std::vector<ASTType *> args, ASTType &return_type, bool varargs=false) : return_type(return_type) {
+    ASTFunctionType(std::string name, std::vector<ASTType *> args, ASTType *return_type, bool varargs=false) {
         this->name = name;
         this->args = args;
         this->varargs = varargs;
+        this->return_type = return_type;
     }
     llvm::Type *get_type() const {
         std::vector<llvm::Type *> arg_types;
         for (auto it=this->args.begin(); it != this->args.end(); it++) {
             arg_types.push_back((*it)->get_type());
         }
-        return llvm::FunctionType::get(this->return_type.get_type(), arg_types, this->varargs);
+        return llvm::FunctionType::get(this->return_type->get_type(), arg_types, this->varargs);
     }
 };
 //TODO: split off ASTConst to different types to offload the work to the lexer?
 class ASTConst : public ASTValue {
     public:
-    ASTType &type;
+    ASTType *type;
     std::string thing;
     llvm::Value *codegen() {
-        auto t = type.get_type();
+        auto t = type->get_type();
         switch(t->getTypeID()) {
             //case llvm::Type::HalfTyID : 
             //case llvm::Type::BFloatTyID: 
@@ -342,12 +357,13 @@ class ASTConst : public ASTValue {
             //case llvm::Type::FixedVectorTyID: 
             //case llvm::Type::ScalableVectorTyID : 
             default:
-            llvm::errs() << "Invalid type: " << this->type.name;
+            llvm::errs() << "Invalid type: " << this->type->name;
             return nullptr;
         }
     }
-    ASTConst(ASTType &t, std::string container) : type(t) {
+    ASTConst(ASTType *t, std::string container) {
         this->thing = container;
+        this->type = t;
     }
 };
 class ASTOperand : public ASTValue {
@@ -371,11 +387,11 @@ class ASTOperand : public ASTValue {
         BOOL_AND
     };
     Operand op;
-    ASTValue &arg1;
-    ASTValue &arg2;
+    ASTValue *arg1;
+    ASTValue *arg2;
     llvm::Value *codegen() const {
-        auto val1 = arg1.codegen();
-        auto val2 = arg2.codegen();
+        auto val1 = arg1->codegen();
+        auto val2 = arg2->codegen();
         bool float_op = false;
         //strict type checking
         //if (val1->getType()->isFloatingPointTy()) {
@@ -516,7 +532,11 @@ class ASTOperand : public ASTValue {
             }
         }
     }
-    ASTOperand(ASTValue &lhs, ASTValue &rhs, Operand op) : arg1(lhs), arg2(rhs), op(op) {}
+    ASTOperand(ASTValue *lhs, ASTValue *rhs, Operand op) {
+        this->arg1 = lhs;
+        this->arg2 = rhs;
+        this->op = op;
+    }
 };
 class ASTValueCall : public ASTValue {
     public:
@@ -559,21 +579,22 @@ class ASTGetVarPtr : public ASTValue {
 };
 class ASTUnaryOp : public ASTValue {
     public:
-    ASTValue &arg;
+    ASTValue *arg;
     enum UOps {
         NOT
     };
     UOps op;
     llvm::Value *codegen() {
-        auto val = arg.codegen();
+        auto val = arg->codegen();
         switch (op) {
             case NOT:
                 return Builder->CreateNot(val);
             break;
         }
     }
-    ASTUnaryOp(UOps operand, ASTValue &arg) : arg(arg) {
+    ASTUnaryOp(UOps operand, ASTValue *arg) {
         this->op = operand;
+        this->arg = arg;
     }
 };
 
@@ -585,14 +606,15 @@ class ASTGlobalEntry {
 //Extern declarations
 class ASTGlobalPrototype : public ASTGlobalEntry {
     public:
-    ASTType &type;
+    ASTType *type;
     bool constant;
-    ASTGlobalPrototype(std::string name, ASTType &type, bool is_constant=false) : type(type) {
+    ASTGlobalPrototype(std::string name, ASTType *type, bool is_constant=false) {
         this->name = name;
         this->constant = is_constant;
+        this->type = type;
     }
     void codegen() {
-        auto t = this->type.get_type();
+        auto t = this->type->get_type();
         if (t->isFunctionTy()) {
             auto f = llvm::Function::Create(static_cast<llvm::FunctionType *>(t), llvm::GlobalValue::ExternalLinkage, name, *TheModule);
         } else {
@@ -604,17 +626,20 @@ class ASTGlobalPrototype : public ASTGlobalEntry {
 };
 class ASTGlobalFunction : public ASTGlobalEntry {
     public:
-    ASTBody &body;
-    ASTFunctionType type;
+    ASTBody *body;
+    ASTFunctionType *type;
     std::vector<std::string> args;
-    ASTGlobalFunction(std::string name,ASTFunctionType t, ASTBody &body, std::vector<std::string> args) : body(body), args(args), type(t) {
+    ASTGlobalFunction(std::string name,ASTFunctionType *t, ASTBody *body, std::vector<std::string> args) {
+        this->type = t;
+        this->body = body;
+        this->args = args;
         this->name = name;
     };
     void codegen() const {
         auto prototype = TheModule->getFunction(name);
         if (!prototype) {
             //TODO: the static cast here may break stuff and segfault, simply split away the function declaration if this happens
-            prototype = llvm::Function::Create(static_cast<llvm::FunctionType *>(type.get_type()), llvm::GlobalValue::ExternalLinkage, name, *TheModule);
+            prototype = llvm::Function::Create(static_cast<llvm::FunctionType *>(type->get_type()), llvm::GlobalValue::ExternalLinkage, name, *TheModule);
         }
         llvm::BasicBlock *BB = llvm::BasicBlock::Create(*TheContext, name, prototype);
         Builder->SetInsertPoint(BB);
@@ -628,20 +653,12 @@ class ASTGlobalFunction : public ASTGlobalEntry {
         }
         LocalScope.push_back(local);
         std::cout << "ARGSCOPE: " << LocalScope.back() << " should be " << local << "\n";
-        body.codegen();
+        body->codegen();
         LocalScope.pop_back();
     }
 };
-int main(int argc, char *argv[]) {
-    //TODO: Get target triple from args?
-    auto triple_name_str = llvm::sys::getDefaultTargetTriple();
-    auto arch_name = std::string();    
-    auto target_triple = llvm::Triple(triple_name_str);
-
-    init_module();
-    //TODO: Fill this up with the program
+std::vector<ASTGlobalEntry *> get_program() {
     std::vector<ASTGlobalEntry *> program;
-
     //example program
     //TODO: get an actual program here
     auto args = std::vector<ASTType *>();
@@ -653,33 +670,38 @@ int main(int argc, char *argv[]) {
     auto body = std::vector<ASTBase *>();
     
     //TODO: unspaghettify the references to unspaghettify the example code
-
-    auto getfirstvar = ASTGetVar("one");
-    auto getsecondvar = ASTGetVar("two");
-    auto addition = ASTOperand(
-                getfirstvar, 
-                getsecondvar, 
-                ASTOperand::ADD);
     body.push_back(
         new ASTReturnVal(
-            addition
+            new ASTOperand(
+                new ASTGetVar("one"), 
+                new ASTGetVar("two"), 
+                ASTOperand::ADD)
         )
     );
-    auto int_type = ASTIntType(64);
-    auto ftype = ASTFunctionType(
-            "add",
-            args,
-            int_type
-        );
-    auto ast_body = ASTBody(
-            body
-        );
     program.push_back(new ASTGlobalFunction(
         "add",
-        ftype,
-        ast_body,
+        new ASTFunctionType(
+            "add",
+            args,
+            new ASTIntType(64)
+        ),
+        new ASTBody(
+            body
+        ),
         argnames
     ));
+    return program;
+}
+
+int main(int argc, char *argv[]) {
+    //TODO: Get target triple from args?
+    auto triple_name_str = llvm::sys::getDefaultTargetTriple();
+    auto arch_name = std::string();    
+    auto target_triple = llvm::Triple(triple_name_str);
+
+    init_module();
+    //TODO: Fill this up with the program
+    auto program = get_program();
 
     //PROGRAM CODEGEN
     for (auto entry = program.begin(); entry != program.end(); entry++) {
