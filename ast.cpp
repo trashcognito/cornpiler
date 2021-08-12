@@ -1,4 +1,8 @@
 #include <iostream>
+#include <llvm-12/llvm/IR/Type.h>
+#include <llvm-12/llvm/Support/raw_ostream.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Verifier.h>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -93,9 +97,10 @@ namespace ast {
         this->condition = condition;
     }
     void While::codegen() const {
-        auto while_start = llvm::BasicBlock::Create(*TheContext);
-            auto while_body = llvm::BasicBlock::Create(*TheContext);
-            auto while_end = llvm::BasicBlock::Create(*TheContext);
+        auto parent = Builder->GetInsertBlock()->getParent();
+        auto while_start = llvm::BasicBlock::Create(*TheContext, "", parent);
+            auto while_body = llvm::BasicBlock::Create(*TheContext, "", parent);
+            auto while_end = llvm::BasicBlock::Create(*TheContext, "", parent);
             Builder->CreateBr(while_start);
             Builder->SetInsertPoint(while_start);
             Builder->CreateCondBr(condition->codegen(), while_body, while_end);
@@ -111,10 +116,11 @@ namespace ast {
         this->condition = condition;
     }
     void If::codegen() const {
-        auto if_start = llvm::BasicBlock::Create(*TheContext);
-        auto if_body = llvm::BasicBlock::Create(*TheContext);
-        auto if_else = llvm::BasicBlock::Create(*TheContext);
-        auto if_end = llvm::BasicBlock::Create(*TheContext);
+        auto parent = Builder->GetInsertBlock()->getParent();
+        auto if_start = llvm::BasicBlock::Create(*TheContext, "", parent);
+        auto if_body = llvm::BasicBlock::Create(*TheContext, "", parent);
+        auto if_else = llvm::BasicBlock::Create(*TheContext, "", parent);
+        auto if_end = llvm::BasicBlock::Create(*TheContext, "", parent);
         Builder->CreateBr(if_start);
         Builder->SetInsertPoint(if_start);
         Builder->CreateCondBr(condition->codegen(), if_body, if_else);
@@ -135,10 +141,18 @@ namespace ast {
     }
     void ReturnVal::codegen() const {
         Builder->CreateRet(val->codegen());
+        //hopefully fix Terminator found in the middle of a basic block!
+        auto parent = Builder->GetInsertBlock()->getParent();
+        auto nextblock = llvm::BasicBlock::Create(*TheContext, "", parent);
+        Builder->SetInsertPoint(nextblock);
+        //this block should be optimized out as the next bit of code is unreachable
     }
 
     void ReturnNull::codegen() const {
         Builder->CreateRetVoid();
+        auto parent = Builder->GetInsertBlock()->getParent();
+        auto nextblock = llvm::BasicBlock::Create(*TheContext, "", parent);
+        Builder->SetInsertPoint(nextblock);
     }
 
     IntType::IntType(int bits) {
@@ -170,6 +184,12 @@ namespace ast {
             inside->get_type(),
             length
         );
+    }
+    VoidType::VoidType() {
+
+    };
+    llvm::Type * VoidType::get_type() const {
+        return llvm::Type::getVoidTy(*TheContext);
     }
 
     PointerType::PointerType(Type *to) {
@@ -443,8 +463,8 @@ namespace ast {
         }
     }
 
-    GlobalPrototype::GlobalPrototype(std::string name, Type *type, bool is_constant) {
-        this->name = name;
+    GlobalPrototype::GlobalPrototype(Type *type, bool is_constant) {
+        this->name = type->name;
         this->constant = is_constant;
         this->type = type;
     }
@@ -485,5 +505,6 @@ namespace ast {
         LocalScope.push_back(local);
         body->codegen();
         LocalScope.pop_back();
+        llvm::verifyFunction(*prototype, &llvm::errs());
     }
 }

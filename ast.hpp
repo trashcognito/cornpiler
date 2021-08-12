@@ -133,6 +133,12 @@ namespace ast {
         llvm::Type *get_type() const;
     };
 
+    class VoidType : public Type {
+        public:
+        VoidType();
+        llvm::Type *get_type() const;
+    };
+
     class FunctionType : public Type {
         public:
         Type *return_type;
@@ -221,7 +227,7 @@ namespace ast {
         public:
         Type *type;
         bool constant;
-        GlobalPrototype(std::string name, Type *type, bool is_constant=false);
+        GlobalPrototype(Type *type, bool is_constant=false);
         void codegen() const;
     };
 
