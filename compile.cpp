@@ -251,6 +251,9 @@ int main() {
             case scope_element::arr_array:
               that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
               break;
+            case scope_element::argtype:
+              that_ast = &((dynamic_cast<ast_types::with_args_with_type *>(that_ast))->args);
+              break;
             default:
               std::cout << "Error: invalid scope element" << std::endl;
               exit(0);
@@ -376,7 +379,7 @@ int main() {
               new_scope.push_back((scope_element)appended_index);
               new_scope.push_back(scope_element::args);
               recursive_lex(itt, new_scope, 1);  // args lexing
-            }else{
+            } else {
               --itt;
             }
           } else if (initial_token.value == "deref" || initial_token.value == "ref") {
@@ -394,7 +397,7 @@ int main() {
             itt = recursive_lex(itt, new_scope, 3);  // var type lexing
             to_append.name = ast_types::string_t(look_ahead().value);
             append_ast_scope(scope, to_append);
-          } else if(initial_token.value == "glvar"){  // TODO: autodetect glvar and deprecate it
+          } else if (initial_token.value == "glvar") {  // TODO: autodetect glvar and deprecate it
             //gldef
             ast_types::glbdef to_append;
             std::vector<scope_element> new_scope = scope;
@@ -403,15 +406,15 @@ int main() {
             itt = recursive_lex(itt, new_scope, 4);  // var type lexing // I MAY BE WRONG HERE, THIS MIGHT NEED TO BE 3
             to_append.name = ast_types::string_t(look_ahead().value);
             append_ast_scope(scope, to_append);
-          }else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
+          } else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
             // outer type
             ast_types::out_type to_append;
-            to_append.name = initial_token.value; // wait this works lmao so let me get this straight: it can convert
-                                                  // a type to a class with no default constructor, but it can't convert
-                                                  // an int enum to a fucking int. c'mon.
-                                                  // cpp amirite
-            if(initial_token.value == "arr"){
-              to_append.length = std::stoi(look_ahead().value); // TODO: make this in square brackets and parse it as args
+            to_append.name = initial_token.value;  // wait this works lmao so let me get this straight: it can convert
+                                                   // a type to a class with no default constructor, but it can't convert
+                                                   // an int enum to a fucking int. c'mon.
+                                                   // cpp amirite
+            if (initial_token.value == "arr") {
+              to_append.length = std::stoi(look_ahead().value);  // TODO: make this in square brackets and parse it as args
             }
 
             std::vector<scope_element> new_scope = scope;
@@ -425,22 +428,105 @@ int main() {
             append_ast_scope(scope, to_append);
           } else if (initial_token.value == "fun") {
             // have FUN! jk function
+            ast_types::fundef to_append;
+            to_append.name = look_ahead().value;
+            int appended_index = append_ast_scope(scope, to_append);
+
+            while (program_tokens[itt].value != "=>") {
+              std::string arg_name = look_ahead().value;
+              if (look_ahead().value != ":") {
+                std::cout << "Error: expected ':' in function argument list" << std::endl;
+                exit(1);
+              }
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::argtype);
+              ast_types::arg_with_type_t arg_type_t;
+              arg_type_t.name = arg_name;
+              new_scope.push_back((scope_element)append_ast_scope(new_scope, arg_type_t));
+              itt = recursive_lex(itt, new_scope, 4);  // type lexing
+            }
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::return_type);
+            itt = recursive_lex(itt, new_scope, 4);  // return type lexing
+
+            if (look_ahead().value != "{") {
+              std::cout << "Error: expected '{' in function definition" << std::endl;
+              exit(1);
+            }
+            new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::body);
+            itt = recursive_lex(itt, new_scope, 0);   // body lexing
           } else if (initial_token.value == "ext") {  // TODO: autodetect and deprecate
-            // external function
+                                                      // external function
+            ast_types::fundef to_append;
+            to_append.name = look_ahead().value;
+            int appended_index = append_ast_scope(scope, to_append);
+
+            while (program_tokens[itt].value != "=>") {
+              look_ahead();
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::argtype);
+              ast_types::arg_with_type_t arg_type_t;
+              new_scope.push_back((scope_element)append_ast_scope(new_scope, arg_type_t));
+              itt = recursive_lex(itt, new_scope, 4);  // type lexing
+            }
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)appended_index);
+            new_scope.push_back(scope_element::return_type);
+            itt = recursive_lex(itt, new_scope, 4);  // return type lexing
           } else {
             look_ahead();
             if (program_tokens[itt].value == "(") {
               // function call
+              ast_types::call to_append;
+              to_append.name = ast_types::string_t(initial_token.value);
+              int appended_index = append_ast_scope(scope, to_append);
+
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::args);
+              recursive_lex(itt, new_scope, 1);  // args lexing
             } else {
               // this should be a variable
-              // since we have already incremented itt, we can check whether it is a definition or a reference right away
+              // since we have already incremented itt, we can check whether it is a assignment or a reference right away
               if (program_tokens[itt].value == "=" || program_tokens[itt].value[1] == '=') {
-                // definition
+                // assignment
                 token operation = program_tokens[itt];
                 token var_name = program_tokens[itt - 1];
+                if(operation.value == "=") {
+                  // simple assignment
+                  ast_types::varset to_append;
+                  to_append.name = var_name.value;
+                  std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
+                  new_scope.push_back(scope_element::args);
+                  itt = recursive_lex(itt, new_scope, 1);  // args lexing
+                } else{
+                  // +=, -=, *=, /=, %=, &=, ^=, |=
+                  ast_types::varset to_append;
+                  to_append.name = var_name.value;
+                  std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
+                  new_scope.push_back(scope_element::args);
+                  ast_types::oper opr;
+                  opr.op = operation.value[0];
+                  new_scope.push_back((scope_element)append_ast_scope(new_scope, opr));
+                  new_scope.push_back(scope_element::args);
+                  ast_types::getvar to_append2;
+                  to_append2.name = var_name.value;
+                  append_ast_scope(new_scope, to_append2);
+                  itt = recursive_lex(itt, new_scope, 1);  // args lexing
+                }
               } else {
                 // reference
                 --itt;
+                ast_types::getvar to_append;
+                to_append.name = ast_types::string_t(initial_token.value);
+                append_ast_scope(scope, to_append);
               }
             }
           }
@@ -448,10 +534,16 @@ int main() {
         }
         case token_type::number: {
           // number const
+          ast_types::const_int to_append;
+          to_append.value = stoi(program_tokens[itt].value);
+          append_ast_scope(scope, to_append);
           break;
         }
         case token_type::string: {
           // string const
+          ast_types::const_str to_append;
+          to_append.value = program_tokens[itt].value;
+          append_ast_scope(scope, to_append);
           break;
         }
         case token_type::bracket: {

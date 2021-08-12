@@ -21,7 +21,8 @@ enum class scope_element : int {
   type = -5,
   return_type = -6,
   arr_index = -7,
-  arr_array = -8
+  arr_array = -8,
+  argtype = -9,
 };
 
 enum class token_type {
@@ -107,6 +108,18 @@ class with_return_type : virtual public AST {
  public:
   ast_body return_type;
 };
+
+class arg_with_type_t : public with_type, virtual public AST {
+ public:
+  string_t name;
+  arg_with_type_t(){
+    name = string_t("");
+  }
+};
+class with_args_with_type : virtual public AST {
+  public:
+    ast_body args;
+};
 #pragma endregion ast_global_types
 
 #pragma region
@@ -141,6 +154,7 @@ class number_t : virtual public AST {
   }
 };
 #pragma endregion standard_types_as_ast
+
 
 class global_scope : virtual public AST {
  public:
@@ -197,14 +211,13 @@ class in_type : public AST_node, public AST {
 class out_type : public with_type, public AST_node {
  public:
   string_t name;
-  number_t length;
+  ast_body length;
   out_type() {
     act = act_type::outtype;
-    length = -1;
   }
 };
 
-class extdef : public with_args, public AST_node {
+class extdef : public with_args_with_type, public with_return_type, public AST_node {
  public:
   string_t name;
   extdef() {
@@ -212,7 +225,7 @@ class extdef : public with_args, public AST_node {
   }
 };
 
-class fundef : public with_args, public with_body, public with_return_type, public AST_node {
+class fundef : public with_args_with_type, public with_body, public with_return_type, public AST_node {
  public:
   string_t name;
   fundef() {
