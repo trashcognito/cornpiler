@@ -87,7 +87,7 @@ std::vector<token> tokenize_program(std::string program, int length);
 
 class AST {
   public:
-  virtual ~AST() {}
+  virtual ~AST() = 0;
 };
 
 class AST_node {
@@ -174,9 +174,7 @@ class with_args_with_type : virtual public AST {
 #pragma endregion ast_global_types
 
 
-class global_scope : virtual public AST {
- public:
-  ast_body global;
+class global_scope : public with_body {
 };
 
 class statement : public with_args, public AST_node {
