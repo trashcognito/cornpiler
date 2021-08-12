@@ -35,6 +35,7 @@ namespace ast {
         
     }
     //************MAP DEBUGGING
+    /*
     template <typename K, typename V>
     std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m) {
         os << "{ ";
@@ -45,14 +46,10 @@ namespace ast {
         }
         return os << " }";
     }
+    */
     //************
     llvm::Value *resolve_var_scope(std::string key) {
-
         for (auto it = LocalScope.rbegin(); it != LocalScope.rend(); ++it) {
-
-            std::cout << "SCOPE: " << *it << "\n";
-            std::cout.flush();
-
             if (it->count(key)) {
                 auto val = it->at(key);
                 //auto type = val->getAllocatedType();
@@ -486,7 +483,6 @@ namespace ast {
             arg_offset++;
         }
         LocalScope.push_back(local);
-        std::cout << "ARGSCOPE: " << LocalScope.back() << " should be " << local << "\n";
         body->codegen();
         LocalScope.pop_back();
     }

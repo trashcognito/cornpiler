@@ -116,5 +116,6 @@ int main(int argc, char *argv[]) {
 
   pass.run(*TheModule);
   dest.flush();
+  llvm::outs() << "Wrote output to " << outfile << "\n";
   return 0;
 }
