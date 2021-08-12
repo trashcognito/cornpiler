@@ -156,15 +156,18 @@ std::vector<ast::GlobalEntry *> get_program() {
                 ),
                 new ast::Body(
                     std::vector<ast::Base *> ({
+                        new ast::BaseVardef("str_arg", new ast::Const(
+                                    new ast::StringType(13),
+                                    "Hello World\n"
+                                )),
+
                         new ast::BaseCall(
                             "puts",
                             std::vector<ast::Value *>({
-                                new ast::Const(
-                                    new ast::StringType(13),
-                                    "Hello World\n"
-                                )
+                                new ast::GetVarPtr("str_arg")
                             })
-                        )
+                        ),
+                        new ast::ReturnNull()
                     })
                 ),
                 std::vector<std::string>()

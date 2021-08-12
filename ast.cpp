@@ -13,11 +13,10 @@
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
     void BaseVardef::codegen() const {
-        auto local = LocalScope.back();
         auto value = val->codegen();
         auto var_storage = Builder->CreateAlloca(value->getType());
         Builder->CreateStore(value, var_storage);
-        local[varname] = var_storage;
+        LocalScope.back()[varname] = var_storage;
     }
     BaseVardef::BaseVardef(std::string varname, Value *val) {
         this->val = val;
@@ -254,8 +253,10 @@ namespace ast {
                 {
                 std::vector<llvm::Constant *> string_array;
                 for (auto it=this->thing.begin(); it != this->thing.end(); it++) {
-                    string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getIntegerBitWidth(), *it)));
+                    string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getArrayElementType()->getIntegerBitWidth(), *it)));
                 }
+                //add null byte
+                string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getArrayElementType()->getIntegerBitWidth(), 0)));
                 //TODO: static c here might be a horrible horrible idea that will break the program, unbreak this if the string is borked
                 return llvm::ConstantArray::get(static_cast<llvm::ArrayType *>(t), string_array);
                 }
