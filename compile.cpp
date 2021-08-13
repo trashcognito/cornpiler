@@ -71,7 +71,11 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
       k++;
     }
     logger->log(logger::LOG_LEVEL::ERROR, "");
-    logger->log(logger::LOG_LEVEL::ERROR, line);
+    logger->log(logger::LOG_LEVEL::ERROR, std::to_string(status.row + 1) + " | " + line);
+
+    for (int j = 0; j < std::string(std::to_string(status.row + 1) + " | ").length(); j++) {
+      error_show = " " + error_show;
+    }
     logger->log(logger::LOG_LEVEL::ERROR, error_show);
     exit(-1);
   };
@@ -264,7 +268,10 @@ int main() {
         k++;
       }
       logger.log(logger::LOG_LEVEL::ERROR, "");
-      logger.log(logger::LOG_LEVEL::ERROR, line);
+      logger.log(logger::LOG_LEVEL::ERROR, std::to_string(tk.row + 1) + " | " + line);
+      for (int j = 0; j < std::string(std::to_string(tk.row + 1) + " | ").length(); j++) {
+        error_show = " " + error_show;
+      }
       logger.log(logger::LOG_LEVEL::ERROR, error_show);
       exit(-1);
     };
