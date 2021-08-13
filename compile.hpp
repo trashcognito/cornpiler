@@ -1,17 +1,76 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 #include <string>
 #include <variant>
 #include <vector>
 
-#define DEBUG
+// #define DEBUG
 
 bool check_id_constraints(std::string id, char c);
 
-#ifdef DEBUG
 std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
-#endif
+
+namespace logger {
+enum class LOG_LEVEL {
+  NONE = 0b10000,
+  ERROR = 0b01000,
+  WARNING = 0b00100,
+  INFO = 0b00010,
+  DEBUG = 0b00001,
+};
+enum class SETTINGS {
+  NEWLINE = 0b0001,
+  TYPE = 0b0010,
+  NONE = 0b0,
+};
+LOG_LEVEL operator|(LOG_LEVEL lhs, LOG_LEVEL rhs){
+  return (LOG_LEVEL)((int)lhs | (int)rhs);
+}
+LOG_LEVEL operator&(LOG_LEVEL lhs, LOG_LEVEL rhs){
+  return (LOG_LEVEL)((int)lhs & (int)rhs);
+}
+SETTINGS operator|(SETTINGS lhs, SETTINGS rhs){
+  return (SETTINGS)((int)lhs | (int)rhs);
+}
+SETTINGS operator&(SETTINGS lhs, SETTINGS rhs){
+  return (SETTINGS)((int)lhs & (int)rhs);
+}
+class logger {
+ public:
+  LOG_LEVEL level;
+  std::string log_level_text(LOG_LEVEL lvl) {
+    std::string retval = "";
+    if ((int)lvl & (int)LOG_LEVEL::NONE) {
+      retval += "| NONE ";
+    }
+    if ((int)lvl & (int)LOG_LEVEL::ERROR) {
+      retval += "| ERROR ";
+    }
+    if ((int)lvl & (int)LOG_LEVEL::WARNING) {
+      retval += "| WARNING ";
+    }
+    if ((int)lvl & (int)LOG_LEVEL::INFO) {
+      retval += "| INFO ";
+    }
+    if ((int)lvl & (int)LOG_LEVEL::DEBUG) {
+      retval += "| DEBUG ";
+    }
+    retval.erase(0, 1);
+    return retval;
+  }
+  void log(LOG_LEVEL level, std::string msg, SETTINGS settings = SETTINGS::NEWLINE | SETTINGS::TYPE) {
+    if ((int)(level & logger::level) == 0) return;
+    if((int)(settings & SETTINGS::TYPE) != 0) std::cout << "[" << log_level_text(level) << "] ";
+    std::cout << msg;
+    if((int)(settings & SETTINGS::NEWLINE) != 0) std::cout << std::endl;
+  }
+  logger(LOG_LEVEL l){
+    level = l;
+  }
+};
+};  // namespace logger
 
 enum class scope_element : int {
   global = -1,
@@ -60,33 +119,42 @@ enum class act_type {
 };
 
 class entry_bracket {
-  public:
-    char first;
-    char second;
-    entry_bracket(char f, char s){
-      first = f;
-      second = s;
-    }
-    entry_bracket(){
-      first = 0;
-      second = 0;
-    }
+ public:
+  char first;
+  char second;
+  entry_bracket(char f, char s) {
+    first = f;
+    second = s;
+  }
+  entry_bracket() {
+    first = 0;
+    second = 0;
+  }
 };
 
 class token {
  public:
   token_type type;
   std::string value;
-  token(token_type t, std::string v) {  // god forgive me for writing a function inside a header file
+
+  int row;
+  int col;
+
+  int chr;
+
+  token(token_type t, std::string v, int r, int c, int ch) {  // god forgive me for writing a function inside a header file
     type = t;
     value = v;
+    row = r;
+    col = c;
+    chr = ch;
   }
 };
 
 std::vector<token> tokenize_program(std::string program, int length);
 
 class AST {
-  public:
+ public:
   virtual ~AST() = 0;
 };
 
@@ -106,33 +174,33 @@ namespace ast_types {
 class string_t : virtual public AST {
  public:
   std::string value;
-  string_t(){
+  string_t() {
     value = "";
   }
-  string_t(std::string v){
+  string_t(std::string v) {
     value = v;
   }
-  string_t(char v){
+  string_t(char v) {
     value = std::string(1, v);
   }
 };
 class char_t : virtual public AST {
  public:
   char value;
-  char_t(){
+  char_t() {
     value = '\0';
   };
-  char_t(char v){
+  char_t(char v) {
     value = v;
   }
 };
 class number_t : virtual public AST {
  public:
   int value;
-  number_t(){
+  number_t() {
     value = 0;
   }
-  number_t(int v){
+  number_t(int v) {
     value = v;
   }
 };
@@ -163,16 +231,15 @@ class with_return_type : virtual public AST {
 class arg_with_type_t : public with_type, virtual public AST {
  public:
   string_t name;
-  arg_with_type_t(){
+  arg_with_type_t() {
     name = string_t("");
   }
 };
 class with_args_with_type : virtual public AST {
-  public:
-    ast_body args;
+ public:
+  ast_body args;
 };
 #pragma endregion ast_global_types
-
 
 class global_scope : public with_body {
 };
@@ -313,7 +380,7 @@ class expr : public with_args, public AST_node {
 };
 
 class arrset : public with_args, public AST_node {
-  public:
+ public:
   arrset() {
     act = act_type::arrset;
   }
