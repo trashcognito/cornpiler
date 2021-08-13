@@ -55,13 +55,33 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
     }
   } status;
 
+  auto error_out = [&](std::string errmsg) {
+    logger->log(logger::LOG_LEVEL::ERROR, errmsg);
+    std::string line = "";
+    std::string error_show = "^";
+    int k = status.chr_c;
+    while (k >= 0 && program[k] != '\n') {
+      line = program[k] + line;
+      error_show = "-" + error_show;
+      k--;
+    }
+    k = status.chr_c + 1;
+    while (k < length && program[k] != '\n') {
+      line += program[k];
+      k++;
+    }
+    logger->log(logger::LOG_LEVEL::ERROR, "");
+    logger->log(logger::LOG_LEVEL::ERROR, line);
+    logger->log(logger::LOG_LEVEL::ERROR, error_show);
+    exit(-1);
+  };
+
   status.full_token = "{";
   status.push(token_type::bracket);
   status.reset();
 
   // traverse through the file char by char
   for (int i = 0; i < length; i++) {
-
     char c = i[program];
 
     if (c == '\n') {
@@ -81,8 +101,7 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
       } else if (c == 'r') {
         status.full_token += '\r';
       } else {
-        logger->log(logger::LOG_LEVEL::ERROR, "Invalid escape character: \\" + c); // we can maybe do something more useful here like appending the character by itself but who cares im in charge now
-        exit(-1);                                                                  // it should be safe to use exit here - https://stackoverflow.com/questions/30250934/how-to-end-c-code
+        error_out("Invalid escape character: \\" + c);
       }
     };
 
@@ -114,8 +133,7 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
       } else {
         if (c == '\'') {
           if (status.full_token.length() != 1) {
-            logger->log(logger::LOG_LEVEL::ERROR, "Invalid character literal size: " + std::to_string(status.full_token.length()));
-            exit(-1);  // next time throw an exception lmao
+            error_out("Invalid character literal size: " + std::to_string(status.full_token.length()));
           } else {
             status.full_token = std::to_string(status.full_token[0]);
             status.push(token_type::number);
@@ -192,7 +210,7 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
   status.full_token = "}";
   status.push(token_type::bracket);
   status.reset();
-  
+
   for (auto &t : status.tokens) {
     logger->log(logger::LOG_LEVEL::DEBUG, "Token: " + t.value + "\t\t\tType: " + DEBUG_TOKEN_TYPES[(int)t.type]);
   }
@@ -367,7 +385,6 @@ int main() {
         return program_tokens[itt];
       };
       token initial_token = look_ahead();  // get next token
-
 
       logger.log(logger::LOG_LEVEL::DEBUG, "recursive lexer loop entry, itt: " + std::to_string(itt) + " total token amount: " + std::to_string(program_tokens.size()));
       logger.log(logger::LOG_LEVEL::DEBUG, "Token info: " + initial_token.value + "\t\t\t" + DEBUG_TOKEN_TYPES[(int)initial_token.type]);
