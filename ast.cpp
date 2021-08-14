@@ -1,4 +1,6 @@
 #include <iostream>
+#include <llvm-12/llvm/IR/GlobalObject.h>
+#include <llvm-12/llvm/IR/GlobalVariable.h>
 #include <llvm-12/llvm/IR/Type.h>
 #include <llvm-12/llvm/Support/raw_ostream.h>
 #include <llvm/IR/BasicBlock.h>
@@ -60,12 +62,14 @@ namespace ast {
                 return val;
             }
         }
-        auto glb = TheModule->getGlobalVariable(key);
+        auto glb = TheModule->getNamedGlobal(key); //TheModule->getGlobalVariable(key);
         if (glb) {
             //TODO: Global variables are probably broken, global variables are most likely going to get pointerized
             return glb;
         }
         //TODO: Proper error message
+        
+        llvm::errs() << "Could not resolve symbol \"" << key << "\"" << "\n";
         throw key;
     }
 
@@ -220,7 +224,7 @@ namespace ast {
         this->thing = container;
         this->type = t;
     }
-    llvm::Value *Const::codegen() const {
+    llvm::Constant *Const::codegen() const {
         auto t = type->get_type();
         switch(t->getTypeID()) {
             //case llvm::Type::HalfTyID : 
@@ -507,5 +511,14 @@ namespace ast {
         body->codegen();
         LocalScope.pop_back();
         llvm::verifyFunction(*prototype, &llvm::errs());
+    }
+    GlobalVariable::GlobalVariable(std::string name_a, Const *value, bool is_const) {
+        this->name = name_a;
+        this->value = value;
+        this->constant = is_const;
+    }
+    void GlobalVariable::codegen() const {
+        auto val = this->value->codegen();
+        auto the_var = new llvm::GlobalVariable(*TheModule, val->getType(), this->constant, llvm::GlobalObject::ExternalLinkage, val, this->name);
     }
 }

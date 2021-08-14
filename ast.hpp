@@ -152,7 +152,7 @@ namespace ast {
         public:
         Type *type;
         std::string thing;
-        llvm::Value *codegen() const;
+        llvm::Constant *codegen() const;
         Const(Type *t, std::string container);
     };
 
@@ -237,6 +237,14 @@ namespace ast {
         FunctionType *type;
         std::vector<std::string> args;
         GlobalFunction(FunctionType *t, Body *body, std::vector<std::string> args);
+        void codegen() const;
+    };
+
+    class GlobalVariable : public GlobalEntry {
+        public:
+        bool constant;
+        Const *value;
+        GlobalVariable(std::string name, Const *value, bool is_const=true);
         void codegen() const;
     };
 }

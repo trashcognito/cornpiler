@@ -148,6 +148,13 @@ std::vector<ast::GlobalEntry *> get_program() {
                 ),
                 true
             ),
+            new ast::GlobalVariable(
+                "hello",
+                new ast::Const(
+                    new ast::StringType(13),
+                    "Hello World\n"
+                )
+            ),
             new ast::GlobalFunction(
                 new ast::FunctionType(
                     "say_hello",
@@ -156,15 +163,10 @@ std::vector<ast::GlobalEntry *> get_program() {
                 ),
                 new ast::Body(
                     std::vector<ast::Base *> ({
-                        new ast::BaseVardef("str_arg", new ast::Const(
-                                    new ast::StringType(13),
-                                    "Hello World\n"
-                                )),
-
                         new ast::BaseCall(
                             "puts",
                             std::vector<ast::Value *>({
-                                new ast::GetVarPtr("str_arg")
+                                new ast::GetVarPtr("hello")
                             })
                         ),
                         new ast::ReturnNull()
