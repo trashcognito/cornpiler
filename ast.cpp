@@ -1,4 +1,5 @@
 #include <iostream>
+#include <llvm-12/llvm/IR/DerivedTypes.h>
 #include <llvm-12/llvm/IR/GlobalObject.h>
 #include <llvm-12/llvm/IR/GlobalVariable.h>
 #include <llvm-12/llvm/IR/Type.h>
@@ -219,59 +220,45 @@ namespace ast {
     }
 
     //TODO: split off Const to different types to offload the work to the lexer?
+    FloatConst::FloatConst(float f) {
+        this->from = f;
+    }
+    llvm::Constant *FloatConst::codegen() const {
+        return llvm::ConstantFP::get(*TheContext, llvm::APFloat(this->from));
+    }
 
-    Const::Const(Type *t, std::string container) {
-        this->thing = container;
-        this->type = t;
+    IntegerConst::IntegerConst(intmax_t i, int bits) {
+        this->from = i;
+        this->bits = bits;
     }
-    llvm::Constant *Const::codegen() const {
-        auto t = type->get_type();
-        switch(t->getTypeID()) {
-            //case llvm::Type::HalfTyID : 
-            //case llvm::Type::BFloatTyID: 
-            case llvm::Type::FloatTyID : 
-                return llvm::ConstantFP::get(*TheContext, llvm::APFloat((float)std::stof(thing)));
-            break;
-            //case llvm::Type::DoubleTyID : 
-            //case llvm::Type::X86_FP80TyID : 
-            //case llvm::Type::FP128TyID : 
-            //case llvm::Type::PPC_FP128TyID : 
-            //case llvm::Type::VoidTyID : 
-            //case llvm::Type::LabelTyID : 
-            //case llvm::Type::MetadataTyID : 
-            //case llvm::Type::X86_MMXTyID : 
-            //case llvm::Type::X86_AMXTyID : 
-            //case llvm::Type::TokenTyID : 
-            case llvm::Type::IntegerTyID: 
-                //parse integer
-                //TODO: test if signed?
-                return llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getIntegerBitWidth(),std::stoi(thing)));
-            break;
-            //TODO: maybe resolve functions?
-            //case llvm::Type::FunctionTyID : 
-            //TODO: const pointers could be ints?
-            //case llvm::Type::PointerTyID: 
-            //case llvm::Type::StructTyID : 
-            case llvm::Type::ArrayTyID: 
-                //TODO: Assuming string here - this is bad
-                {
-                std::vector<llvm::Constant *> string_array;
-                for (auto it=this->thing.begin(); it != this->thing.end(); it++) {
-                    string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getArrayElementType()->getIntegerBitWidth(), *it)));
-                }
-                //add null byte
-                string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(t->getArrayElementType()->getIntegerBitWidth(), 0)));
-                //TODO: static c here might be a horrible horrible idea that will break the program, unbreak this if the string is borked
-                return llvm::ConstantArray::get(static_cast<llvm::ArrayType *>(t), string_array);
-                }
-            break;
-            //case llvm::Type::FixedVectorTyID: 
-            //case llvm::Type::ScalableVectorTyID : 
-            default:
-            llvm::errs() << "Invalid type: " << this->type->name;
-            return nullptr;
+    llvm::Constant *IntegerConst::codegen() const {
+        return llvm::ConstantInt::get(*TheContext, llvm::APInt(this->bits,this->from));
+    }
+
+    StringConst::StringConst(std::string from) {
+        this->orig = from;
+    }
+    llvm::Constant *StringConst::codegen() const {
+        std::vector<llvm::Constant *> string_array;
+        for (auto it=this->orig.begin(); it != this->orig.end(); it++) {
+            string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(8, *it)));
         }
+        //add null byte
+        string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(8, 0)));
+        //TODO: static c here might be a horrible horrible idea that will break the program, unbreak this if the string is borked
+        return llvm::ConstantArray::get(llvm::ArrayType::get(llvm::IntegerType::get(*TheContext, 8), string_array.size()), string_array);
     }
+    ArrayConst::ArrayConst(Type *subtype, std::vector<Const *> from) {
+        this->getfrom = from;
+        this->t = subtype;
+    }
+    llvm::Constant *ArrayConst::codegen() const {
+        std::vector<llvm::Constant *> init_array;
+        for (auto it=this->getfrom.begin(); it != this->getfrom.end(); it++) {
+            init_array.push_back((*it)->codegen());
+        }
+        return llvm::ConstantArray::get(llvm::ArrayType::get(this->t->get_type(), this->getfrom.size()), init_array);
+    };
 
     Operand::Operand(Value *lhs, Value *rhs, OperandType op) {
         this->arg1 = lhs;

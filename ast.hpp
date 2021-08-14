@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/StringRef.h>
@@ -147,13 +148,43 @@ namespace ast {
         FunctionType(std::string name, std::vector<Type *> args, Type *return_type, bool varargs=false);
         llvm::Type *get_type() const;
     };
+    //float
+    //integer
+    //array
+    //string
 
+    //maybe pointer const?
     class Const : public Value {
         public:
-        Type *type;
-        std::string thing;
+        llvm::Constant *codegen() const = 0;
+    };
+    class IntegerConst : public Const {
+        public:
+        intmax_t from;
+        int bits;
         llvm::Constant *codegen() const;
-        Const(Type *t, std::string container);
+        IntegerConst(intmax_t i, int bits);
+    };
+    //todo: add different floats? maybe template?
+    class FloatConst : public Const {
+        public:
+        float from;
+        llvm::Constant *codegen() const;
+        FloatConst(float f);
+    };
+    //TODO: template specializations
+    class ArrayConst : public Const {
+        public:
+        std::vector<Const *> getfrom;
+        llvm::Constant *codegen() const;
+        Type *t;
+        ArrayConst(Type *subtype,std::vector<Const *> from);
+    };
+    class StringConst : public Const {
+        public:
+        std::string orig;
+        llvm::Constant *codegen() const;
+        StringConst(std::string from);
     };
 
     class Operand : public Value {
