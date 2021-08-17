@@ -1,2 +1,2 @@
 # cornpiler
-Compiler for https://github.com/kahveciderin/cornlang (AST JSON to LLVM)
+LLVM Frontend for https://github.com/kahveciderin/cornlang
