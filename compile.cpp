@@ -1,6 +1,8 @@
 #include "compile.hpp"
 #include "logger.hpp"
 
+#include "ast_front.hpp"
+
 #include <cstdlib>
 #include <fstream>
 #include <functional>
