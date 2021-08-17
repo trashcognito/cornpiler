@@ -10,68 +10,6 @@
 
 bool check_id_constraints(std::string id, char c);
 
-std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
-
-namespace logger {
-    enum class LOG_LEVEL {
-        NONE = 0b10000,
-        ERROR = 0b01000,
-        WARNING = 0b00100,
-        INFO = 0b00010,
-        DEBUG = 0b00001,
-    };
-    enum class SETTINGS {
-        NEWLINE = 0b0001,
-        TYPE = 0b0010,
-        NONE = 0b0,
-    };
-    LOG_LEVEL operator|(LOG_LEVEL lhs, LOG_LEVEL rhs){
-        return (LOG_LEVEL)((int)lhs | (int)rhs);
-    }
-    LOG_LEVEL operator&(LOG_LEVEL lhs, LOG_LEVEL rhs){
-        return (LOG_LEVEL)((int)lhs & (int)rhs);
-    }
-    SETTINGS operator|(SETTINGS lhs, SETTINGS rhs){
-        return (SETTINGS)((int)lhs | (int)rhs);
-    }
-    SETTINGS operator&(SETTINGS lhs, SETTINGS rhs){
-        return (SETTINGS)((int)lhs & (int)rhs);
-    }
-    class logger {
-        public:
-        LOG_LEVEL level;
-        std::string log_level_text(LOG_LEVEL lvl) {
-            std::string retval = "";
-            if ((int)lvl & (int)LOG_LEVEL::NONE) {
-            retval += "| NONE ";
-            }
-            if ((int)lvl & (int)LOG_LEVEL::ERROR) {
-            retval += "| ERROR ";
-            }
-            if ((int)lvl & (int)LOG_LEVEL::WARNING) {
-            retval += "| WARNING ";
-            }
-            if ((int)lvl & (int)LOG_LEVEL::INFO) {
-            retval += "| INFO ";
-            }
-            if ((int)lvl & (int)LOG_LEVEL::DEBUG) {
-            retval += "| DEBUG ";
-            }
-            retval.erase(0, 1);
-            return retval;
-        }
-        void log(LOG_LEVEL level, std::string msg, SETTINGS settings = SETTINGS::NEWLINE | SETTINGS::TYPE) {
-            if ((int)(level & logger::level) == 0) return;
-            if((int)(settings & SETTINGS::TYPE) != 0) std::cout << "[" << log_level_text(level) << "] ";
-            std::cout << msg;
-            if((int)(settings & SETTINGS::NEWLINE) != 0) std::cout << std::endl;
-        }
-        logger(LOG_LEVEL l){
-            level = l;
-        }
-    };
-};  // namespace logger
-
 enum class scope_element : int {
     global = -1,
     args = -2,

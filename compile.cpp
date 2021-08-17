@@ -1,4 +1,5 @@
 #include "compile.hpp"
+#include "logger.hpp"
 
 #include <cstdlib>
 #include <fstream>
@@ -7,6 +8,8 @@
 #include <vector>
 
 AST::~AST() {}
+
+std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
 
 bool check_id_constraints(std::string id, char c) {
     bool retval = isalpha(c) || c == '_';
@@ -106,7 +109,9 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
         } else if (c == 'r') {
             status.full_token += '\r';
         } else {
-            error_out("Invalid escape character: \\" + c);
+            std::string error_message("Invalid escape character: \\");
+            error_message += c;
+            error_out(error_message);
         }
         };
 
@@ -223,176 +228,149 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
     return status.tokens;
 }
 
-int main() {
-    logger::logger logger(logger::LOG_LEVEL::DEBUG | logger::LOG_LEVEL::INFO | logger::LOG_LEVEL::WARNING | logger::LOG_LEVEL::ERROR | logger::LOG_LEVEL::NONE);
+logger::logger global_logger(logger::LOG_LEVEL::DEBUG | logger::LOG_LEVEL::INFO | logger::LOG_LEVEL::WARNING | logger::LOG_LEVEL::ERROR | logger::LOG_LEVEL::NONE);
 
-    logger.log(logger::LOG_LEVEL::DEBUG, "Logger Test");
-
-    std::ifstream is("tests/helloworld.crn");
-
-    if (!is) {
-        logger.log(logger::LOG_LEVEL::ERROR, "File not found");
-        exit(-1);
+char *file_buffer;
+int is_length;
+ast_types::global_scope globals;
+std::vector<token> program_tokens;
+void error_out(std::string error_message, token tk) {
+    global_logger.log(logger::LOG_LEVEL::ERROR, error_message);
+    std::string line = "";
+    std::string error_show = "^";
+    int k = tk.chr;
+    while (k >= 0 && file_buffer[k] != '\n') {
+        line = file_buffer[k] + line;
+        error_show = "-" + error_show;
+        k--;
     }
-    is.seekg(0, is.end);
-    int is_length = is.tellg();
-    is.seekg(0, is.beg);
-    char *file_buffer = new char[is_length];
-    int f_iter = 0;
-    while (!is.eof() && f_iter < is_length) {
-        is.get(file_buffer[f_iter]);  //reading single character from file to array
-        f_iter++;
+    k = tk.chr + 1;
+    while (k < is_length && file_buffer[k] != '\n') {
+        line += file_buffer[k];
+        k++;
     }
-    is.close();
+    global_logger.log(logger::LOG_LEVEL::ERROR, "");
+    global_logger.log(logger::LOG_LEVEL::ERROR, std::to_string(tk.row + 1) + " | " + line);
+    for (int j = 0; j < std::string(std::to_string(tk.row + 1) + " | ").length(); j++) {
+        error_show = " " + error_show;
+    }
+    global_logger.log(logger::LOG_LEVEL::ERROR, error_show);
+    exit(-1);
+}
+AST *goto_ast_scope(std::vector<scope_element> in_scope) {
+    global_logger.log(logger::LOG_LEVEL::DEBUG, "Reaching into ", logger::SETTINGS::TYPE);
+    AST *that_ast = &(globals);
+    int scope_i = 0;
+    for (auto s : in_scope) {  // copy, do not reference
+        if ((int)s >= 0) {       // int
+            ast_body *_temp_body = dynamic_cast<ast_body *>(that_ast);
+            std::vector<AST *> _temp_inhere = _temp_body->body;
+            that_ast = _temp_inhere[(int)s];
 
-    std::vector<token> program_tokens = tokenize_program(file_buffer, is_length, &logger);
-    // delete[] file_buffer; // do not delete the file buffer, we will need it when displaying errors
+            global_logger.log(logger::LOG_LEVEL::DEBUG, "> [" + std::to_string((int)s) + "] ", logger::SETTINGS::NONE);
+        } else {
+            switch ((scope_element)s) {
+                case scope_element::global:
+                that_ast = &((dynamic_cast<ast_types::global_scope *>(that_ast))->body);
 
-    ast_types::global_scope globals;
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> global", logger::SETTINGS::NONE);
+                break;
+                case scope_element::args:
+                that_ast = &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
 
-    std::function<int(int, std::vector<scope_element>, int, entry_bracket)> recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode, entry_bracket entr) {  // returns the new itt
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> args", logger::SETTINGS::NONE);
+                break;
+                case scope_element::body:
+                that_ast = &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
 
-    #pragma region
-        auto error_out = [&](std::string error_message, token tk) {
-        logger.log(logger::LOG_LEVEL::ERROR, error_message);
-        std::string line = "";
-        std::string error_show = "^";
-        int k = tk.chr;
-        while (k >= 0 && file_buffer[k] != '\n') {
-            line = file_buffer[k] + line;
-            error_show = "-" + error_show;
-            k--;
-        }
-        k = tk.chr + 1;
-        while (k < is_length && file_buffer[k] != '\n') {
-            line += file_buffer[k];
-            k++;
-        }
-        logger.log(logger::LOG_LEVEL::ERROR, "");
-        logger.log(logger::LOG_LEVEL::ERROR, std::to_string(tk.row + 1) + " | " + line);
-        for (int j = 0; j < std::string(std::to_string(tk.row + 1) + " | ").length(); j++) {
-            error_show = " " + error_show;
-        }
-        logger.log(logger::LOG_LEVEL::ERROR, error_show);
-        exit(-1);
-        };
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> body", logger::SETTINGS::NONE);
+                break;
+                case scope_element::second_body:
+                that_ast = &((dynamic_cast<ast_types::with_second_body *>(that_ast))->second_body);
 
-        auto goto_ast_scope = [&](std::vector<scope_element> in_scope) {
-        logger.log(logger::LOG_LEVEL::DEBUG, "Reaching into ", logger::SETTINGS::TYPE);
-        AST *that_ast = &(globals);
-        int scope_size = scope.size();
-        int scope_i = 0;
-        for (auto s : in_scope) {  // copy, do not reference
-            if ((int)s >= 0) {       // int
-                ast_body *_temp_body = dynamic_cast<ast_body *>(that_ast);
-                std::vector<AST *> _temp_inhere = _temp_body->body;
-                that_ast = _temp_inhere[(int)s];
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> second_body", logger::SETTINGS::NONE);
+                break;
+                case scope_element::type:
+                that_ast = &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
 
-                logger.log(logger::LOG_LEVEL::DEBUG, "> [" + std::to_string((int)s) + "] ", logger::SETTINGS::NONE);
-            } else {
-                switch ((scope_element)s) {
-                    case scope_element::global:
-                    that_ast = &((dynamic_cast<ast_types::global_scope *>(that_ast))->body);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> type", logger::SETTINGS::NONE);
+                break;
+                case scope_element::return_type:
+                that_ast = &((dynamic_cast<ast_types::with_return_type *>(that_ast))->return_type);
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> global", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::args:
-                    that_ast = &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> return_type", logger::SETTINGS::NONE);
+                break;
+                case scope_element::arr_index:
+                that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->index);
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> args", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::body:
-                    that_ast = &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> arr_index", logger::SETTINGS::NONE);
+                break;
+                case scope_element::arr_array:
+                that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> body", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::second_body:
-                    that_ast = &((dynamic_cast<ast_types::with_second_body *>(that_ast))->second_body);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> arr_array", logger::SETTINGS::NONE);
+                break;
+                case scope_element::argtype:
+                that_ast = &((dynamic_cast<ast_types::with_args_with_type *>(that_ast))->args);
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> second_body", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::type:
-                    that_ast = &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> argtype", logger::SETTINGS::NONE);
+                break;
+                case scope_element::out_length:
+                that_ast = &((dynamic_cast<ast_types::out_type *>(that_ast))->length);
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> type", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::return_type:
-                    that_ast = &((dynamic_cast<ast_types::with_return_type *>(that_ast))->return_type);
+                global_logger.log(logger::LOG_LEVEL::DEBUG, "> out_length", logger::SETTINGS::NONE);
+                default:
 
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> return_type", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::arr_index:
-                    that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->index);
-
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> arr_index", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::arr_array:
-                    that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
-
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> arr_array", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::argtype:
-                    that_ast = &((dynamic_cast<ast_types::with_args_with_type *>(that_ast))->args);
-
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> argtype", logger::SETTINGS::NONE);
-                    break;
-                    case scope_element::out_length:
-                    that_ast = &((dynamic_cast<ast_types::out_type *>(that_ast))->length);
-
-                    logger.log(logger::LOG_LEVEL::DEBUG, "> out_length", logger::SETTINGS::NONE);
-                    default:
-
-                    logger.log(logger::LOG_LEVEL::ERROR, "\nInvalid scope element");
-                    exit(0);
-                }
+                global_logger.log(logger::LOG_LEVEL::ERROR, "\nInvalid scope element");
+                exit(0);
             }
         }
-        logger.log(logger::LOG_LEVEL::DEBUG, "", logger::SETTINGS::NEWLINE);
-        return that_ast;
-        };
-
-        auto set_ast_scope = [&](std::vector<scope_element> scope, AST *val) {
-            *goto_ast_scope(scope) = *val;
-        };
-
-        auto append_ast_scope = [&](std::vector<scope_element> scope, AST *val) {
-            int index_inserted;
-            AST *that_ast = goto_ast_scope(scope);
-            index_inserted = (dynamic_cast<ast_body *>(that_ast))->body.size();
-            (dynamic_cast<ast_body *>(that_ast))->body.push_back(val);
-            return index_inserted;
-        };
-
-        auto get_ast_scope = [&](std::vector<scope_element> scope) {  // returns a pointer to that ast
-            return goto_ast_scope(scope);
-        };
-
-        auto check_if_operation = [](token kword) {
-            return (kword.value == "+" || kword.value == "-" || kword.value == "*" || kword.value == "/" || kword.value == ">" || kword.value == "<" || kword.value == "==" || kword.value == "<=" || kword.value == ">=" || kword.value == "&&" || kword.value == "||" || kword.value == "&" || kword.value == "|" || kword.value == "^" || kword.value == "!=" || kword.value == "!" || kword.value == "%");
-        };
-
-    #pragma endregion lexer_functions
-
+    }
+    global_logger.log(logger::LOG_LEVEL::DEBUG, "", logger::SETTINGS::NEWLINE);
+    return that_ast;
+}
+void set_ast_scope(std::vector<scope_element> scope, AST *val) {
+    *goto_ast_scope(scope) = *val;
+}
+int append_ast_scope(std::vector<scope_element> scope, AST *val) {
+    int index_inserted;
+    AST *that_ast = goto_ast_scope(scope);
+    index_inserted = (dynamic_cast<ast_body *>(that_ast))->body.size();
+    (dynamic_cast<ast_body *>(that_ast))->body.push_back(val);
+    return index_inserted;
+};
+AST *get_ast_scope(std::vector<scope_element> scope) {  // returns a pointer to that ast
+    return goto_ast_scope(scope);
+}
+bool check_if_operation(token kword) {
+    return (kword.value == "+" || kword.value == "-" || kword.value == "*" || kword.value == "/" || kword.value == ">" || kword.value == "<" || kword.value == "==" || kword.value == "<=" || kword.value == ">=" || kword.value == "&&" || kword.value == "||" || kword.value == "&" || kword.value == "|" || kword.value == "^" || kword.value == "!=" || kword.value == "!" || kword.value == "%");
+}
+token look_ahead(int *itt,int count = 1) {
+    *itt += count;
+    if (*itt >= is_length) {
+        error_out("Premature end-of-file reached", program_tokens[*itt - count]);
+    }
+    return program_tokens[*itt];
+};
+auto look_behind(int *itt,int count = 1) {
+    *itt -= count;
+    if (*itt < 0) {
+        error_out("Premature end-of-file reached", program_tokens[*itt + count]);
+    }
+    return program_tokens[*itt];
+};
+int recursive_lex(
+    int old_itt, 
+    std::vector<scope_element> scope, 
+    int parsing_mode, 
+    entry_bracket entr
+    ) {
         int itt = old_itt;
         while (true) {
             bool try_continue = true;
-            auto look_ahead = [&](int count = 1) {
-                itt += count;
-                if (itt >= is_length) {
-                error_out("Premature end-of-file reached", program_tokens[itt - count]);
-                }
-                return program_tokens[itt];
-            };
-            auto look_behind = [&](int count = 1) {
-                itt -= count;
-                if (itt < 0) {
-                    error_out("Premature end-of-file reached", program_tokens[itt + count]);
-                }
-                return program_tokens[itt];
-            };
-            token initial_token = look_ahead();  // get next token
-            logger.log(logger::LOG_LEVEL::DEBUG, "recursive lexer loop entry, itt: " + std::to_string(itt) + " total token amount: " + std::to_string(program_tokens.size()));
-            logger.log(logger::LOG_LEVEL::DEBUG, "Token info: " + initial_token.value + "\t\t\t" + DEBUG_TOKEN_TYPES[(int)initial_token.type]);
+            token initial_token = look_ahead(&itt);  // get next token
+            global_logger.log(logger::LOG_LEVEL::DEBUG, "recursive lexer loop entry, itt: " + std::to_string(itt) + " total token amount: " + std::to_string(program_tokens.size()));
+            global_logger.log(logger::LOG_LEVEL::DEBUG, "Token info: " + initial_token.value + "\t\t\t" + DEBUG_TOKEN_TYPES[(int)initial_token.type]);
             switch (initial_token.type) {
                 case token_type::identifier: {
                 if (initial_token.value == "if") {
@@ -414,8 +392,8 @@ int main() {
                     new_scope.push_back(scope_element::body);
                     itt = recursive_lex(itt, new_scope, 0, entry_bracket('{', '}'));  // body lexing
 
-                    if (look_ahead().value == "else") {
-                        if (look_ahead().value == "if") {
+                    if (look_ahead(&itt).value == "else") {
+                        if (look_ahead(&itt).value == "if") {
                             new_scope = scope;
                             scope.push_back((scope_element)appended_index);
                             scope.push_back(scope_element::second_body);
@@ -453,7 +431,7 @@ int main() {
                     to_append->name = ast_types::string_t(initial_token.value);
                     int appended_index = append_ast_scope(scope, to_append);
 
-                    if (look_ahead().value == "(") {
+                    if (look_ahead(&itt).value == "(") {
                         std::vector<scope_element> new_scope = scope;
                         new_scope.push_back((scope_element)appended_index);
                         new_scope.push_back(scope_element::args);
@@ -465,7 +443,7 @@ int main() {
                     // varop
                     ast_types::varop *to_append = new ast_types::varop;
                     to_append->name = ast_types::string_t(initial_token.value);
-                    to_append->var = ast_types::string_t(look_ahead().value);
+                    to_append->var = ast_types::string_t(look_ahead(&itt).value);
                     append_ast_scope(scope, to_append);
                 } else if (initial_token.value == "var") {
                     // vardef
@@ -474,7 +452,7 @@ int main() {
                     new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
                     new_scope.push_back(scope_element::type);
                     itt = recursive_lex(itt, new_scope, 3, entry_bracket('(', ')'));  // var type lexing
-                    to_append->name = ast_types::string_t(look_ahead().value);
+                    to_append->name = ast_types::string_t(look_ahead(&itt).value);
                     append_ast_scope(scope, to_append);
                 } else if (initial_token.value == "glvar") {  // TODO: autodetect glvar and deprecate it
                     //gldef
@@ -483,7 +461,7 @@ int main() {
                     new_scope.push_back((scope_element)append_ast_scope(scope, to_append));
                     new_scope.push_back(scope_element::type);
                     itt = recursive_lex(itt, new_scope, 4, entry_bracket('(', ')'));  // var type lexing // I MAY BE WRONG HERE, THIS MIGHT NEED TO BE 3
-                    to_append->name = ast_types::string_t(look_ahead().value);
+                    to_append->name = ast_types::string_t(look_ahead(&itt).value);
                     append_ast_scope(scope, to_append);
                 } else if (initial_token.value == "ptr" || initial_token.value == "arr" || initial_token.value == "unsigned") {
                     // outer type
@@ -495,7 +473,7 @@ int main() {
 
                     int appended_index = append_ast_scope(scope, to_append);
                     if (initial_token.value == "arr") {
-                        if (look_ahead().value != "[") {
+                        if (look_ahead(&itt).value != "[") {
                             error_out("array type must be followed by [", program_tokens[itt]);
                         }
                         std::vector<scope_element> new_scope = scope;
@@ -516,13 +494,13 @@ int main() {
                 } else if (initial_token.value == "fun") {
                     // have FUN! jk function
                     ast_types::fundef *to_append = new ast_types::fundef;
-                    to_append->name = look_ahead().value;
+                    to_append->name = look_ahead(&itt).value;
                     int appended_index = append_ast_scope(scope, to_append);
 
                     // look_ahead();
                     while (program_tokens[itt].value != "=>") {
-                        std::string arg_name = look_ahead().value;
-                        if (look_ahead().value != ":") {
+                        std::string arg_name = look_ahead(&itt).value;
+                        if (look_ahead(&itt).value != ":") {
                             error_out("expected ':' in function argument list", program_tokens[itt]);
                         }
                         std::vector<scope_element> new_scope = scope;
@@ -533,14 +511,14 @@ int main() {
                         new_scope.push_back((scope_element)append_ast_scope(new_scope, arg_type_t));
                         new_scope.push_back(scope_element::type);
                         itt = recursive_lex(itt, new_scope, 4, entry_bracket('(', ')'));  // type lexing
-                        look_ahead();
+                        look_ahead(&itt);
                     }
                     std::vector<scope_element> new_scope = scope;
                     new_scope.push_back((scope_element)appended_index);
                     new_scope.push_back(scope_element::return_type);
                     itt = recursive_lex(itt, new_scope, 4, entry_bracket('(', ')'));  // return type lexing
 
-                    if (look_ahead().value != "{") {
+                    if (look_ahead(&itt).value != "{") {
                         error_out("expected '{' in function definition", program_tokens[itt - 1]);
                     }
                     new_scope = scope;
@@ -550,11 +528,11 @@ int main() {
                 } else if (initial_token.value == "ext") {                          // TODO: autodetect and deprecate
                                                                                     // external function
                     ast_types::fundef *to_append = new ast_types::fundef;
-                    to_append->name = look_ahead().value;
+                    to_append->name = look_ahead(&itt).value;
                     int appended_index = append_ast_scope(scope, to_append);
 
                     while (program_tokens[itt].value != "=>") {
-                        look_ahead();
+                        look_ahead(&itt);
                         std::vector<scope_element> new_scope = scope;
                         new_scope.push_back((scope_element)appended_index);
                         new_scope.push_back(scope_element::argtype);
@@ -567,7 +545,7 @@ int main() {
                     new_scope.push_back(scope_element::return_type);
                     itt = recursive_lex(itt, new_scope, 4, entry_bracket('(', ')'));  // return type lexing
                 } else {
-                    look_ahead();
+                    look_ahead(&itt);
                     if (program_tokens[itt].value == "(") {
                         // function call
                         bool self_function = program_tokens[itt - 1].value == ".";
@@ -727,7 +705,7 @@ int main() {
             }
 
             if (parsing_mode == 2) {
-                look_ahead();
+                look_ahead(&itt);
                 itt -= 1;  // check for end of file
                 if ((!check_if_operation(program_tokens[itt])) && (!check_if_operation(program_tokens[itt + 1]))) {
                     break;
@@ -741,7 +719,30 @@ int main() {
             }
         }
         return itt;
-    };
+    
+}
+int main() {
+    global_logger.log(logger::LOG_LEVEL::DEBUG, "Logger Test");
+
+    std::ifstream is("tests/helloworld.crn");
+
+    if (!is) {
+        global_logger.log(logger::LOG_LEVEL::ERROR, "File not found");
+        exit(-1);
+    }
+    is.seekg(0, is.end);
+    is_length = is.tellg();
+    is.seekg(0, is.beg);
+    file_buffer = new char[is_length];
+    int f_iter = 0;
+    while (!is.eof() && f_iter < is_length) {
+        is.get(file_buffer[f_iter]);  //reading single character from file to array
+        f_iter++;
+    }
+    is.close();
+
+    program_tokens = tokenize_program(file_buffer, is_length, &global_logger);
+    // delete[] file_buffer; // do not delete the file buffer, we will need it when displaying errors
 
     recursive_lex(-1, {scope_element::global}, 0, entry_bracket('{', '}'));
 
