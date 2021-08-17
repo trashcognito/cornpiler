@@ -1,8 +1,10 @@
 #include <iostream>
+#include <llvm-12/llvm/IR/Constant.h>
 #include <llvm-12/llvm/IR/DerivedTypes.h>
 #include <llvm-12/llvm/IR/GlobalObject.h>
 #include <llvm-12/llvm/IR/GlobalVariable.h>
 #include <llvm-12/llvm/IR/Type.h>
+#include <llvm-12/llvm/IR/Value.h>
 #include <llvm-12/llvm/Support/raw_ostream.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Verifier.h>
@@ -246,7 +248,9 @@ namespace ast {
         //add null byte
         string_array.push_back(llvm::ConstantInt::get(*TheContext, llvm::APInt(8, 0)));
         //TODO: static c here might be a horrible horrible idea that will break the program, unbreak this if the string is borked
-        return llvm::ConstantArray::get(llvm::ArrayType::get(llvm::IntegerType::get(*TheContext, 8), string_array.size()), string_array);
+        auto constval = llvm::ConstantArray::get(llvm::ArrayType::get(llvm::IntegerType::get(*TheContext, 8), string_array.size()), string_array);
+        auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
+        return globconst;
     }
     ArrayConst::ArrayConst(Type *subtype, std::vector<Const *> from) {
         this->getfrom = from;
@@ -468,7 +472,7 @@ namespace ast {
         } else {
             //extern simple value
             //TODO: add address space stuff
-            llvm::GlobalVariable(*TheModule,t,this->constant, llvm::GlobalValue::ExternalLinkage, nullptr, name);
+            new llvm::GlobalVariable(*TheModule,t,this->constant, llvm::GlobalValue::ExternalLinkage, nullptr, name);
         }
     }
 
@@ -496,8 +500,15 @@ namespace ast {
         }
         LocalScope.push_back(local);
         body->codegen();
+        //Automatically add return instruction
+        auto ret_type = prototype->getReturnType();
+        if (ret_type->isVoidTy()) {
+            Builder->CreateRetVoid();
+        } else {
+            auto ret_const = llvm::Constant::getNullValue(ret_type);
+            Builder->CreateRet(ret_const);
+        }
         LocalScope.pop_back();
-        llvm::verifyFunction(*prototype, &llvm::errs());
     }
     GlobalVariable::GlobalVariable(std::string name_a, Const *value, bool is_const) {
         this->name = name_a;

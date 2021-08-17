@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <llvm-12/llvm/IR/Verifier.h>
+#include <llvm-12/llvm/Support/CodeGen.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/IR/IRBuilder.h>
@@ -129,7 +130,7 @@ std::vector<ast::GlobalEntry *> get_program() {
     
     /*
         extern int puts(const char *);
-        void say_hello() {
+        void main() {
             puts("Hello, world!");
         }
     */
@@ -148,15 +149,9 @@ std::vector<ast::GlobalEntry *> get_program() {
                 ),
                 true
             ),
-            new ast::GlobalVariable(
-                "hello",
-                new ast::StringConst(
-                    "Hello World\n"
-                )
-            ),
             new ast::GlobalFunction(
                 new ast::FunctionType(
-                    "say_hello",
+                    "main",
                     std::vector<ast::Type *>({}),
                     new ast::VoidType()
                 ),
@@ -165,7 +160,9 @@ std::vector<ast::GlobalEntry *> get_program() {
                         new ast::BaseCall(
                             "puts",
                             std::vector<ast::Value *>({
-                                new ast::GetVarPtr("hello")
+                                new ast::StringConst(
+                                    "Hello World"
+                                )
                             })
                         ),
                         new ast::ReturnNull()
@@ -211,7 +208,7 @@ int main(int argc, char *argv[]) {
     auto CPU = "generic";
     auto Features = "";
     llvm::TargetOptions opt;
-    auto RM = llvm::Optional<llvm::Reloc::Model>();
+    auto RM = llvm::Optional<llvm::Reloc::Model>(llvm::Reloc::Model::PIC_);
     auto TheTargetMachine = target->createTargetMachine(triple_name_str, CPU, Features, opt, RM);
     TheModule->setDataLayout(TheTargetMachine->createDataLayout());
     llvm::verifyModule(*TheModule, &llvm::errs());
