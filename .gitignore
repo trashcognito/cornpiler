@@ -11,5 +11,10 @@ CTestTestfile.cmake
 _deps
 build/*
 .cache
-
+.vscode/
+.vscode/settings.json
+tests/
+compile
+*.log
+parse_cli
 output.o
