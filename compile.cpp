@@ -55,8 +55,8 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
     }
   } status;
 
-  auto error_out = [&](std::string errmsg) {
-    logger->log(logger::LOG_LEVEL::ERROR, errmsg);
+  auto error_out = [&](std::string errmsg, logger::LOG_LEVEL level = logger::LOG_LEVEL::ERROR, bool _exit = true) {
+    logger->log(level, errmsg);
     std::string line = "";
     std::string error_show = "^";
     int k = status.chr_c;
@@ -70,14 +70,14 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
       line += program[k];
       k++;
     }
-    logger->log(logger::LOG_LEVEL::ERROR, "");
-    logger->log(logger::LOG_LEVEL::ERROR, std::to_string(status.row + 1) + " | " + line);
+    logger->log(level, "");
+    logger->log(level, std::to_string(status.row + 1) + " | " + line);
 
     for (int j = 0; j < std::string(std::to_string(status.row + 1) + " | ").length(); j++) {
       error_show = " " + error_show;
     }
-    logger->log(logger::LOG_LEVEL::ERROR, error_show);
-    exit(-1);
+    logger->log(level, error_show);
+    if(_exit) exit(-1);
   };
 
   status.full_token = "{";
@@ -252,8 +252,8 @@ int main() {
   std::function<int(int, std::vector<scope_element>, int, entry_bracket)> recursive_lex = [&](int old_itt, std::vector<scope_element> scope, int parsing_mode, entry_bracket entr) {  // returns the new itt
 
 #pragma region
-    auto error_out = [&](std::string error_message, token tk) {
-      logger.log(logger::LOG_LEVEL::ERROR, error_message);
+    auto error_out = [&](std::string error_message, token tk, logger::LOG_LEVEL level = logger::LOG_LEVEL::ERROR, bool _exit = true) {
+      logger.log(level, error_message);
       std::string line = "";
       std::string error_show = "^";
       int k = tk.chr;
@@ -267,13 +267,13 @@ int main() {
         line += file_buffer[k];
         k++;
       }
-      logger.log(logger::LOG_LEVEL::ERROR, "");
-      logger.log(logger::LOG_LEVEL::ERROR, std::to_string(tk.row + 1) + " | " + line);
+      logger.log(level, "");
+      logger.log(level, std::to_string(tk.row + 1) + " | " + line);
       for (int j = 0; j < std::string(std::to_string(tk.row + 1) + " | ").length(); j++) {
         error_show = " " + error_show;
       }
-      logger.log(logger::LOG_LEVEL::ERROR, error_show);
-      exit(-1);
+      logger.log(level, error_show);
+      if(_exit) exit(-1);
     };
 
     auto goto_ast_scope = [&](std::vector<scope_element> in_scope) {
@@ -521,9 +521,9 @@ int main() {
             to_append->name = look_ahead().value;
             int appended_index = append_ast_scope(scope, to_append);
 
-            // look_ahead();
+            look_ahead();
             while (program_tokens[itt].value != "=>") {
-              std::string arg_name = look_ahead().value;
+              std::string arg_name = program_tokens[itt].value;
               if (look_ahead().value != ":") {
                 error_out("expected ':' in function argument list", program_tokens[itt]);
               }
@@ -719,6 +719,9 @@ int main() {
             }
           }
           break;
+        }
+        case token_type::sep: {
+          error_out("Unnecessary seperator found", program_tokens[itt], logger::LOG_LEVEL::WARNING, false);
         }
       }
       if (!try_continue) break;
