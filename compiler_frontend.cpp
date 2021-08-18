@@ -93,6 +93,7 @@ std::vector<ast::GlobalEntry *> get_program() {
     
     */
     //similar to above, with value if
+    /*
     return std::vector<ast::GlobalEntry *> ({
         new ast::GlobalFunction(
         new ast::FunctionType(
@@ -132,6 +133,70 @@ std::vector<ast::GlobalEntry *> get_program() {
             }
         )
     )});
+    */
+
+    //value while
+
+    return std::vector<ast::GlobalEntry *>({
+        new ast::GlobalPrototype(
+            new ast::FunctionType(
+                "putchar",
+                std::vector<ast::Type *>({
+                    new ast::IntType(32)
+                }),
+                new ast::IntType(32),
+                false
+            ),
+            true
+        ),
+        new ast::GlobalPrototype(
+            new ast::FunctionType(
+                "getchar",
+                std::vector<ast::Type *>({
+                }),
+                new ast::IntType(32),
+                false
+            ),
+            true
+        ),
+        new ast::GlobalFunction(
+            new ast::FunctionType(
+                "main",
+                std::vector<ast::Type *>(),
+                new ast::VoidType,
+                false
+            ),
+            new ast::Body(std::vector<ast::Value *>({
+                new ast::Vardef(
+                    "i",
+                    new ast::IntegerConst(0, 32)
+                ),
+                new ast::Call(
+                    "putchar",
+                    std::vector<ast::Value *>({
+                        new ast::While(
+                            new ast::Body({
+                                new ast::Vardef("c", new ast::Call("getchar", std::vector<ast::Value *>())),
+                                new ast::Varset("i", new ast::Operand(
+                                    new ast::GetVar("i"),
+                                    new ast::IntegerConst(1, 32),
+                                    ast::Operand::OperandType::ADD
+                                )),
+                                new ast::GetVar("c")
+                            }),
+                            new ast::Operand(
+                                new ast::GetVar("i"),
+                                new ast::IntegerConst(5, 32),
+                                ast::Operand::OperandType::LT
+                            )
+                        )
+                    })
+                )
+            })),
+            std::vector<std::string>()
+        )   
+    });
+
     /*
         extern int puts(const char *);
         void main() {
