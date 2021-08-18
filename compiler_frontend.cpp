@@ -257,14 +257,41 @@ std::vector<ast::GlobalEntry *> get_program() {
             ),
             true
         ),
+        new ast::GlobalPrototype(
+            new ast::FunctionType(
+                "scanf",
+                std::vector<ast::Type *>({
+                    new ast::PointerType(
+                        new ast::IntType(8)
+                    )
+                }),
+                new ast::IntType(32),
+                true
+            ),
+            true
+        ),
         new ast::GlobalFunction(
             new ast::FunctionType(
                 "main",
-                std::vector<ast::Type *>(),
-                new ast::VoidType()
+                std::vector<ast::Type *>({
+                    new ast::IntType(32),
+                    new ast::PointerType(new ast::PointerType(new ast::IntType(32))),
+                    new ast::PointerType(new ast::PointerType(new ast::IntType(32)))
+                }),
+                new ast::IntType(32)
             ),
             new ast::Body({
                 new ast::Vardef(
+                    "testarray",
+                    new ast::ArrayType(
+                        new ast::ArrayType(
+                            new ast::IntType(32),
+                            2
+                        ),
+                        2
+                    )
+                ),
+                new ast::Varset(
                     "testarray",
                     new ast::ArrayConst(
                         new ast::ArrayType(new ast::IntType(32), 2),
@@ -286,21 +313,41 @@ std::vector<ast::GlobalEntry *> get_program() {
                         })
                     )
                 ),
+                new ast::Vardef(
+                    "i",
+                    new ast::IntType(32)
+                ),
+                new ast::Varset(
+                    "i",
+                    new ast::IntegerConst(0, 32)
+                ),
+                new ast::Call(
+                    "scanf",
+                    std::vector<ast::Value *>({
+                        new ast::StringConst("%d"),
+                        new ast::GetVarPtr("i")
+                    })
+                ),
                 new ast::Call(
                     "printf",
                     std::vector<ast::Value *>({
-                        new ast::StringConst("%d\n"),
+                        new ast::StringConst("%d %d\n"),
+                        new ast::GetVar("i"),
                         new ast::Arrget(
                             new ast::Arrgetptr(
                                 new ast::GetVarPtr("testarray"),
-                                new ast::IntegerConst(0, 32)
+                                new ast::GetVar("i")
                             ),
                             new ast::IntegerConst(1, 32)
                         )
                     })
                 )
             }),
-            std::vector<std::string>()
+            std::vector<std::string>({
+                "argc",
+                "argv",
+                "envp"
+            })
         )
     });
 }
