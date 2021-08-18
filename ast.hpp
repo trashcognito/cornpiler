@@ -27,11 +27,6 @@ extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
 extern std::unique_ptr<llvm::Module> TheModule;
 namespace ast {
-    class Base {
-        public:
-        virtual void codegen() const = 0;
-    };
-
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
@@ -39,64 +34,56 @@ namespace ast {
 
     using ValueArray=std::vector<Value *>;
 
-    class BaseVardef : public Base {
+    class Vardef : public Value {
         public:
         std::string varname;
         Value *val;
-        void codegen() const;
-        BaseVardef(std::string varname, Value *val);
+        llvm::Value *codegen() const;
+        Vardef(std::string varname, Value *val);
     };
 
-    class BaseCall : public Base {
-        public:
-        std::string function_name;
-        ValueArray argvector;
-        void codegen() const;
-        BaseCall(std::string name, ValueArray args);
-    };
-
-    class BaseVarset : public Base {
+    class Varset : public Value {
         public:
         std::string name;
         Value *val;
-        void codegen() const;
-        BaseVarset(std::string name, Value *val);
+        llvm::Value *codegen() const;
+        Varset(std::string name, Value *val);
     };
 
-    class Body : public Base {
+    class Body : public Value {
         public:
-        std::vector<Base *> body;
-        void codegen() const;
-        Body(std::vector<Base *> body);
+        std::vector<Value *> body;
+        llvm::Value *codegen() const;
+        Body(std::vector<Value *> body);
     };
 
-    class While : public Base {
+    class While : public Value {
         public:
         Body *body;
         Value *condition;
-        void codegen() const;
+        llvm::Value *codegen() const;
         While(Body *body_a, Value *condition);
     };
 
-    class If : public Base {
+    class If : public Value {
         public:
         Body *body_t;
         Body *body_f;
         Value *condition;
-        void codegen() const;
+        llvm::Value *codegen() const;
         If(Body *body_if,Body *body_else, Value *condition);
     };
 
-    class ReturnVal : public Base {
+    class ReturnVal : public Value {
         public:
         Value *val;
-        void codegen() const;
+        llvm::Value *codegen() const;
         ReturnVal(Value *val);
     };
 
-    class ReturnNull : public Base {
+    class ReturnNull : public Value {
         public:
-        void codegen() const;
+        llvm::Value *codegen() const;
     };
 
     class Type {
@@ -214,12 +201,12 @@ namespace ast {
         Operand(Value *lhs, Value *rhs, OperandType op);
     };
 
-    class ValueCall : public Value {
+    class Call : public Value {
         public:
         std::string function_name;
         ValueArray argvector;
         llvm::Value *codegen() const;
-        ValueCall(std::string name, ValueArray args);
+        Call(std::string name, ValueArray args);
     };
 
     class GetVar : public Value {

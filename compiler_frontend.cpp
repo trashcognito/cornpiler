@@ -48,7 +48,7 @@ std::vector<ast::GlobalEntry *> get_program() {
             }
         }
     */
-    /*
+    
     return std::vector<ast::GlobalEntry *> ({
         new ast::GlobalFunction(
         new ast::FunctionType(
@@ -61,17 +61,17 @@ std::vector<ast::GlobalEntry *> get_program() {
             new ast::IntType(64)
         ),
         new ast::Body(
-            std::vector<ast::Base *>({
+            std::vector<ast::Value *>({
                 new ast::If(
                     new ast::Body(
-                        std::vector<ast::Base *>({
+                        std::vector<ast::Value *>({
                             new ast::ReturnVal(
                                 new ast::IntegerConst(2, 64)
                             )
                         })
                     ), 
                     new ast::Body(
-                        std::vector<ast::Base *>({
+                        std::vector<ast::Value *>({
                             new ast::ReturnVal(
                                 new ast::IntegerConst(7, 64)
                             )
@@ -90,7 +90,7 @@ std::vector<ast::GlobalEntry *> get_program() {
             }
         )
     )});
-    */
+    
     
     /*
         extern int puts(const char *);
@@ -98,7 +98,7 @@ std::vector<ast::GlobalEntry *> get_program() {
             puts("Hello, world!");
         }
     */
-    
+    /*
     return std::vector<ast::GlobalEntry *>(
         {
             new ast::GlobalPrototype(
@@ -136,5 +136,5 @@ std::vector<ast::GlobalEntry *> get_program() {
             )
         }
     );
-    
+    */
 }

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <llvm-12/llvm/IR/Constants.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalObject.h>
@@ -17,30 +18,16 @@
 
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
-    void BaseVardef::codegen() const {
+    llvm::Value *Vardef::codegen() const {
         auto value = val->codegen();
         auto var_storage = Builder->CreateAlloca(value->getType());
         Builder->CreateStore(value, var_storage);
         LocalScope.back()[varname] = var_storage;
+        return value;
     }
-    BaseVardef::BaseVardef(std::string varname, Value *val) {
+    Vardef::Vardef(std::string varname, Value *val) {
         this->val = val;
         this->varname = varname;
-    }
-
-    BaseCall::BaseCall(std::string name, ValueArray args) {
-        this->function_name = name;
-        this->argvector = args;
-    }
-
-    void BaseCall::codegen() const {
-        auto fun = TheModule->getFunction(function_name);
-        std::vector<llvm::Value *> args;
-        for (auto i = argvector.begin(); i != argvector.end(); ++i) {
-            args.push_back((*i)->codegen());
-        }
-        Builder->CreateCall(fun, args);
-        
     }
     //************MAP DEBUGGING
     /*
@@ -76,33 +63,39 @@ namespace ast {
         throw key;
     }
 
-    BaseVarset::BaseVarset(std::string name, Value *val) {
+    Varset::Varset(std::string name, Value *val) {
         this->val = val;
         this->name = name;
     }
 
-    void BaseVarset::codegen() const {
+    llvm::Value *Varset::codegen() const {
         auto location = resolve_var_scope(name);
-        Builder->CreateStore(val->codegen(), location);
+        auto value = val->codegen();
+        Builder->CreateStore(value, location);
+        return value;
     }
 
-    Body::Body(std::vector<Base *> body) {
+    Body::Body(std::vector<Value *> body) {
         this->body = body;
     }
-    void Body::codegen() const {
+    llvm::Value *Body::codegen() const {
         //Creates a new local scope
         LocalScope.emplace(LocalScope.end());
+        //TODO: test if this works somehow
+        llvm::Value *result;
+        result = llvm::PoisonValue::get(llvm::Type::getVoidTy(*TheContext));
         for (auto it = body.begin(); it != body.end(); ++it) {
-            (*it)->codegen();
+            result = (*it)->codegen();
         }
         LocalScope.pop_back();
+        return result;
     }
 
     While::While(Body *body_a, Value *condition) {
         this->body = body_a;
         this->condition = condition;
     }
-    void While::codegen() const {
+    llvm::Value *While::codegen() const {
         auto parent = Builder->GetInsertBlock()->getParent();
         auto while_start = llvm::BasicBlock::Create(*TheContext, "", parent);
             auto while_body = llvm::BasicBlock::Create(*TheContext, "", parent);
@@ -111,9 +104,10 @@ namespace ast {
             Builder->SetInsertPoint(while_start);
             Builder->CreateCondBr(condition->codegen(), while_body, while_end);
             Builder->SetInsertPoint(while_body);
-            body->codegen();
+            auto res = body->codegen();
             Builder->CreateBr(while_start);
             Builder->SetInsertPoint(while_end);
+            return res;
     }
 
     If::If(Body *body_if,Body *body_else, Value *condition) {
@@ -121,44 +115,75 @@ namespace ast {
         this->body_f = body_else;
         this->condition = condition;
     }
-    void If::codegen() const {
+    //TODO: Actually test this, it seems spaghetti
+    llvm::Value *If::codegen() const {
         auto parent = Builder->GetInsertBlock()->getParent();
+        auto if_prelude = llvm::BasicBlock::Create(*TheContext, "", parent);
         auto if_start = llvm::BasicBlock::Create(*TheContext, "", parent);
         auto if_body = llvm::BasicBlock::Create(*TheContext, "", parent);
         auto if_else = llvm::BasicBlock::Create(*TheContext, "", parent);
         auto if_end = llvm::BasicBlock::Create(*TheContext, "", parent);
-        Builder->CreateBr(if_start);
+        Builder->CreateBr(if_prelude);
+
         Builder->SetInsertPoint(if_start);
         Builder->CreateCondBr(condition->codegen(), if_body, if_else);
+        //Create new result variable
 
         Builder->SetInsertPoint(if_body);
-        body_t->codegen();
-        Builder->CreateBr(if_end);
+        auto res_t = body_t->codegen();
+        auto br_t_inst = Builder->CreateBr(if_end);
 
         Builder->SetInsertPoint(if_else);
-        body_f->codegen();
-        Builder->CreateBr(if_end);
+        auto res_f = body_f->codegen();
+        auto br_f_inst = Builder->CreateBr(if_end);
 
-        Builder->SetInsertPoint(if_end);
+        //create merge variable
+        Builder->SetInsertPoint(if_prelude);
+        auto ty_t = res_t->getType();
+        auto ty_f = res_f->getType();
+        llvm::Value *result;
+        if (ty_t->getTypeID() != ty_f->getTypeID()) {
+            llvm::errs() << "WARNING: Type mismatch: " << ty_t << " and " << ty_f << " are not compatible in if statement";
+            result = llvm::PoisonValue::get(ty_t);
+            Builder->CreateBr(if_start);
+            Builder->SetInsertPoint(if_end);
+        } else if (ty_t->isVoidTy()) {
+            result = llvm::PoisonValue::get(ty_t);
+            Builder->CreateBr(if_start);
+            Builder->SetInsertPoint(if_end);
+        } else {
+            auto rvar = Builder->CreateAlloca(ty_t);
+            Builder->CreateBr(if_start);
+            Builder->SetInsertPoint(br_t_inst);
+            Builder->CreateStore(res_t, rvar);
+            Builder->SetInsertPoint(br_f_inst);
+            Builder->CreateStore(res_f, rvar);
+            Builder->SetInsertPoint(if_end);
+            result = Builder->CreateLoad(rvar);
+        }
+        return result;
     }
 
     ReturnVal::ReturnVal(Value *val) {
         this->val = val;
     }
-    void ReturnVal::codegen() const {
+    llvm::Value *ReturnVal::codegen() const {
         Builder->CreateRet(val->codegen());
         //hopefully fix Terminator found in the middle of a basic block!
         auto parent = Builder->GetInsertBlock()->getParent();
         auto nextblock = llvm::BasicBlock::Create(*TheContext, "", parent);
         Builder->SetInsertPoint(nextblock);
         //this block should be optimized out as the next bit of code is unreachable
+        //never use the value of a return statement in anything else
+        return llvm::PoisonValue::get(llvm::Type::getVoidTy(*TheContext));
     }
 
-    void ReturnNull::codegen() const {
+    llvm::Value *ReturnNull::codegen() const {
         Builder->CreateRetVoid();
         auto parent = Builder->GetInsertBlock()->getParent();
         auto nextblock = llvm::BasicBlock::Create(*TheContext, "", parent);
         Builder->SetInsertPoint(nextblock);
+        return llvm::PoisonValue::get(llvm::Type::getVoidTy(*TheContext));
     }
 
     IntType::IntType(int bits) {
@@ -414,12 +439,12 @@ namespace ast {
         }
     }
 
-    ValueCall::ValueCall(std::string name, ValueArray args) {
+    Call::Call(std::string name, ValueArray args) {
         this->function_name = name;
         this->argvector = args;
     }
 
-    llvm::Value * ValueCall::codegen() const {
+    llvm::Value *Call::codegen() const {
         //TODO: implement calling function from local scope?
         auto fun = TheModule->getFunction(function_name);
         std::vector<llvm::Value *> args;
