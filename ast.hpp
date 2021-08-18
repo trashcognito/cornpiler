@@ -223,6 +223,13 @@ namespace ast {
         GetVarPtr(std::string name);
     };
 
+    class Deref : public Value {
+        public:
+        Value *p;
+        llvm::Value *codegen() const;
+        Deref(Value *ptr);
+    };
+
     class UnaryOp : public Value {
         public:
         Value *arg;

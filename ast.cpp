@@ -310,7 +310,9 @@ namespace ast {
         for (auto it=this->getfrom.begin(); it != this->getfrom.end(); it++) {
             init_array.push_back((*it)->codegen());
         }
-        return llvm::ConstantArray::get(llvm::ArrayType::get(this->t->get_type(), this->getfrom.size()), init_array);
+        auto constval = llvm::ConstantArray::get(llvm::ArrayType::get(this->t->get_type(), this->getfrom.size()), init_array);
+        auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
+        return globconst;
     };
 
     Operand::Operand(Value *lhs, Value *rhs, OperandType op) {
@@ -492,6 +494,12 @@ namespace ast {
 
     llvm::Value * GetVarPtr::codegen() const {
         return resolve_var_scope(var_name);
+    }
+    Deref::Deref(Value *ptr) {
+        this->p = ptr;
+    }
+    llvm::Value *Deref::codegen() const {
+        return Builder->CreateLoad(this->p->codegen());
     }
 
     UnaryOp::UnaryOp(UOps operand, Value *arg) {
