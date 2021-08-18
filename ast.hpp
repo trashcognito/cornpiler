@@ -233,6 +233,28 @@ namespace ast {
         llvm::Value *codegen() const;
         UnaryOp(UOps operand, Value *arg);
     };
+    class Arrget : public Value {
+        public:
+        Value *array;
+        std::vector<Value *> indexes;
+        llvm::Value *codegen() const;
+        Arrget(Value *array, std::vector<Value *> indexes);
+    };
+    class Arrset : public Value {
+        public:
+        Value *array;
+        std::vector<Value *> indexes;
+        Value *val;
+        llvm::Value *codegen() const;
+        Arrset(Value *array, std::vector<Value *> indexes, Value *val);
+    };
+    class Arrgetptr : public Value {
+        public:
+        Value *array;
+        std::vector<Value *> indexes;
+        llvm::Value *codegen() const;
+        Arrgetptr(Value *array, std::vector<Value *> indexes);
+    };
 
     class GlobalEntry {
         public:

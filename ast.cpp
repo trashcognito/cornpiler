@@ -506,6 +506,39 @@ namespace ast {
             break;
         }
     }
+    Arrgetptr::Arrgetptr(Value *array, std::vector<Value *> indexes) {
+        this->array = array;
+        this->indexes = indexes;
+    }
+    llvm::Value *Arrgetptr::codegen() const {
+        std::vector<llvm::Value *> idxlist;
+        for (auto val : this->indexes) {
+            idxlist.push_back(val->codegen());
+        }
+        return Builder->CreateGEP(this->array->codegen(), idxlist);
+    }
+
+    Arrget::Arrget(Value *array, std::vector<Value *> indexes) {
+        this->array = array;
+        this->indexes = indexes;
+    }
+    llvm::Value *Arrget::codegen() const {
+        auto the_pointer = new Arrgetptr(this->array, this->indexes);
+        return Builder->CreateLoad(the_pointer->codegen());
+    }
+
+    Arrset::Arrset(Value *array, std::vector<Value *> indexes, Value *val) {
+        this->array = array;
+        this->indexes = indexes;
+        this->val = val;
+    }
+
+    llvm::Value *Arrset::codegen() const {
+        auto the_pointer = new Arrgetptr(this->array, this->indexes);
+        auto value = this->val->codegen();
+        Builder->CreateStore(value, the_pointer->codegen());
+        return value;
+    }
 
     GlobalPrototype::GlobalPrototype(Type *type, bool is_constant) {
         this->name = type->name;
