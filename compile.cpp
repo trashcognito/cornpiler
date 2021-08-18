@@ -600,7 +600,8 @@ ast_types::global_scope lex_program(file_object input_file,
                                   entry_bracket('{', '}')); // body lexing
             } else if (initial_token.value == "return" ||
                        initial_token.value == "break" ||
-                       initial_token.value == "continue") {
+                       initial_token.value == "continue" ||
+                       initial_token.value == "deref") {
               // statement
               ast_types::statement *to_append = new ast_types::statement;
               to_append->name = ast_types::string_t(initial_token.value);
@@ -615,7 +616,7 @@ ast_types::global_scope lex_program(file_object input_file,
               } else {
                 --itt;
               }
-            } else if (initial_token.value == "deref" ||
+            } else if (
                        initial_token.value == "ref") {
               // varop
               ast_types::varop *to_append = new ast_types::varop;

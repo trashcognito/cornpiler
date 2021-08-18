@@ -154,6 +154,8 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value*)new ast::ReturnVal(recursive_translate_body(new_scope)[0]));
               }
+            }else if(dynamic_cast<ast_types::statement *>(e)->name.value == "deref"){
+              
             }
           break;
           case act_type::statement_with_body:
@@ -167,9 +169,43 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                 new_scope_body.push_back(scope_element::body);
 
                 args.push_back((ast::Value*)new ast::While(
-                  recursive_translate_body(new_scope_body),
+                  new ast::Body(recursive_translate_body(new_scope_body)),
                   recursive_translate_body(new_scope_args)[0]));
             }
+          break;
+          case act_type::statement_with_two_bodies:
+            if(dynamic_cast<ast_types::statement_with_two_bodies *>(e)->name.value == "if"){
+                std::vector<scope_element> new_scope_args = scope;
+                new_scope_args.push_back((scope_element)i);
+                new_scope_args.push_back(scope_element::args);
+
+                std::vector<scope_element> new_scope_body = scope;
+                new_scope_body.push_back((scope_element)i);
+                new_scope_body.push_back(scope_element::body);
+
+                std::vector<scope_element> new_scope_second_body = scope;
+                new_scope_second_body.push_back((scope_element)i);
+                new_scope_second_body.push_back(scope_element::second_body);
+
+                args.push_back((ast::Value*)new ast::If(
+                  new ast::Body(recursive_translate_body(new_scope_body)),
+                  new ast::Body(recursive_translate_body(new_scope_second_body)),
+                  recursive_translate_body(new_scope_args)[0]
+                ));
+            }
+          break;
+          case act_type::varop:
+            if(dynamic_cast<ast_types::varop *>(e)->name.value == "ref"){
+              args.push_back((ast::Value*)new ast::GetVarPtr(
+                dynamic_cast<ast_types::varop *>(e)->var.value
+              ));
+            }else if(dynamic_cast<ast_types::varop *>(e)->name.value == "deref"){
+              // TODO: uncomment
+              // args.push_back((ast::Value*)new ast::Deref(
+              //   dynamic_cast<ast_types::varop *>(e)->var.value
+              // ));
+            }
+
           break;
           }
           i++;
