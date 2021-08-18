@@ -25,6 +25,8 @@ target_link_libraries(cornpiler ${llvm_libs} ${targets})
 
 target_compile_options(cornpiler PUBLIC -fstandalone-debug)
 
+add_subdirectory(tests)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)

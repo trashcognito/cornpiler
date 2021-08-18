@@ -13,7 +13,6 @@ build/*
 .cache
 .vscode/
 .vscode/settings.json
-tests/
 compile
 *.log
 parse_cli
