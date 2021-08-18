@@ -316,8 +316,9 @@ namespace ast {
             init_array.push_back((*it)->codegen());
         }
         auto constval = llvm::ConstantArray::get(llvm::ArrayType::get(this->t->get_type(), this->getfrom.size()), init_array);
-        auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
-        return globconst;
+        //auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
+        //return globconst;
+        return constval;
     };
 
     Operand::Operand(Value *lhs, Value *rhs, OperandType op) {

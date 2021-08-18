@@ -244,6 +244,28 @@ std::vector<ast::GlobalEntry *> get_program() {
     */
     //array test
     return std::vector<ast::GlobalEntry *>({
+        new ast::GlobalVariable(
+            "lookup",
+            new ast::ArrayConst(
+                        new ast::ArrayType(new ast::IntType(32), 2),
+                        std::vector<ast::Const *>({
+                            new ast::ArrayConst(
+                                new ast::ArrayType(new ast::IntType(32), 2),
+                                std::vector<ast::Const *>({
+                                    new ast::IntegerConst(1, 32),
+                                    new ast::IntegerConst(2, 32)
+                                })
+                            ),
+                            new ast::ArrayConst(
+                                new ast::ArrayType(new ast::IntType(32), 2),
+                                std::vector<ast::Const *>({
+                                    new ast::IntegerConst(3, 32),
+                                    new ast::IntegerConst(4, 32)
+                                })
+                            )
+                        })
+                    )
+        ),
         new ast::GlobalPrototype(
             new ast::FunctionType(
                 "printf",
@@ -282,38 +304,6 @@ std::vector<ast::GlobalEntry *> get_program() {
             ),
             new ast::Body({
                 new ast::Vardef(
-                    "testarray",
-                    new ast::ArrayType(
-                        new ast::ArrayType(
-                            new ast::IntType(32),
-                            2
-                        ),
-                        2
-                    )
-                ),
-                new ast::Varset(
-                    "testarray",
-                    new ast::ArrayConst(
-                        new ast::ArrayType(new ast::IntType(32), 2),
-                        std::vector<ast::Const *>({
-                            new ast::ArrayConst(
-                                new ast::ArrayType(new ast::IntType(32), 2),
-                                std::vector<ast::Const *>({
-                                    new ast::IntegerConst(1, 32),
-                                    new ast::IntegerConst(2, 32)
-                                })
-                            ),
-                            new ast::ArrayConst(
-                                new ast::ArrayType(new ast::IntType(32), 2),
-                                std::vector<ast::Const *>({
-                                    new ast::IntegerConst(3, 32),
-                                    new ast::IntegerConst(4, 32)
-                                })
-                            )
-                        })
-                    )
-                ),
-                new ast::Vardef(
                     "i",
                     new ast::IntType(32)
                 ),
@@ -335,7 +325,7 @@ std::vector<ast::GlobalEntry *> get_program() {
                         new ast::GetVar("i"),
                         new ast::Arrget(
                             new ast::Arrgetptr(
-                                new ast::GetVarPtr("testarray"),
+                                new ast::GetVarPtr("lookup"),
                                 new ast::GetVar("i")
                             ),
                             new ast::IntegerConst(1, 32)
