@@ -516,7 +516,16 @@ namespace ast {
         auto idx = this->index->codegen();
         auto gepval = Builder->CreateGEP(arrval, idx);
         //TODO: dont assume the underlying indexed type is an array
-        return Builder->CreatePointerCast(gepval, arrval->getType()->getPointerElementType()->getArrayElementType()->getPointerTo());
+        auto elem_type = arrval->getType()->getPointerElementType();
+        if (elem_type->getTypeID() == llvm::Type::TypeID::ArrayTyID) {
+            return Builder->CreatePointerCast(gepval, elem_type->getArrayElementType()->getPointerTo());
+        } else if (elem_type->getTypeID() == llvm::Type::TypeID::PointerTyID) {
+            return Builder->CreatePointerCast(gepval, elem_type->getPointerElementType()->getPointerTo());
+        } else {
+            //Broken GEP
+            throw elem_type;
+        }
+        
     }
 
     Arrget::Arrget(Value *array, Value *index) {
