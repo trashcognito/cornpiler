@@ -13,7 +13,6 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_executable(cornpiler main.cpp ast.cpp compiler_frontend.cpp compile.cpp)
-
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 foreach(target ${LLVM_TARGETS_TO_BUILD})
@@ -25,6 +24,8 @@ endforeach()
 target_link_libraries(cornpiler ${llvm_libs} ${targets})
 
 target_compile_options(cornpiler PUBLIC)
+
+add_subdirectory(tests)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

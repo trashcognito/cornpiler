@@ -1,0 +1,5 @@
+ext sin f => f
+
+fun main => none {
+    println("Sine of 12 is $f".fmt(sin(12)))
+}

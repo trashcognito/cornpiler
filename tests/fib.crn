@@ -1,0 +1,12 @@
+fun fib a:i5, b:i5 => none { # this is a sample comment
+    println("$n".fmt(b)) # this too
+    if(b >= 100){
+        return(null)
+    }
+    fib(b, a + b)
+}
+
+fun main => none {
+    println("$n".fmt(1))
+    fib(1, 1)
+}
