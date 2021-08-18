@@ -1,5 +1,6 @@
 #include <iostream>
 #include <llvm-12/llvm/IR/Constants.h>
+#include <llvm-12/llvm/IR/Instruction.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalObject.h>
@@ -506,35 +507,35 @@ namespace ast {
             break;
         }
     }
-    Arrgetptr::Arrgetptr(Value *array, std::vector<Value *> indexes) {
+    Arrgetptr::Arrgetptr(Value *array, Value *index) {
         this->array = array;
-        this->indexes = indexes;
+        this->index = index;
     }
     llvm::Value *Arrgetptr::codegen() const {
-        std::vector<llvm::Value *> idxlist;
-        for (auto val : this->indexes) {
-            idxlist.push_back(val->codegen());
-        }
-        return Builder->CreateGEP(this->array->codegen(), idxlist);
+        auto arrval = this->array->codegen();
+        auto idx = this->index->codegen();
+        auto gepval = Builder->CreateGEP(arrval, idx);
+        //TODO: dont assume the underlying indexed type is an array
+        return Builder->CreatePointerCast(gepval, arrval->getType()->getPointerElementType()->getArrayElementType()->getPointerTo());
     }
 
-    Arrget::Arrget(Value *array, std::vector<Value *> indexes) {
+    Arrget::Arrget(Value *array, Value *index) {
         this->array = array;
-        this->indexes = indexes;
+        this->index = index;
     }
     llvm::Value *Arrget::codegen() const {
-        auto the_pointer = new Arrgetptr(this->array, this->indexes);
+        auto the_pointer = new Arrgetptr(this->array, this->index);
         return Builder->CreateLoad(the_pointer->codegen());
     }
 
-    Arrset::Arrset(Value *array, std::vector<Value *> indexes, Value *val) {
+    Arrset::Arrset(Value *array, Value *index, Value *val) {
         this->array = array;
-        this->indexes = indexes;
+        this->index = index;
         this->val = val;
     }
 
     llvm::Value *Arrset::codegen() const {
-        auto the_pointer = new Arrgetptr(this->array, this->indexes);
+        auto the_pointer = new Arrgetptr(this->array, this->index);
         auto value = this->val->codegen();
         Builder->CreateStore(value, the_pointer->codegen());
         return value;

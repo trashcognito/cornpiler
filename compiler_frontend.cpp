@@ -136,7 +136,7 @@ std::vector<ast::GlobalEntry *> get_program() {
     */
 
     //value while
-
+    /*
     return std::vector<ast::GlobalEntry *>({
         new ast::GlobalPrototype(
             new ast::FunctionType(
@@ -196,7 +196,7 @@ std::vector<ast::GlobalEntry *> get_program() {
             std::vector<std::string>()
         )   
     });
-
+    */
     /*
         extern int puts(const char *);
         void main() {
@@ -242,4 +242,65 @@ std::vector<ast::GlobalEntry *> get_program() {
         }
     );
     */
+    //array test
+    return std::vector<ast::GlobalEntry *>({
+        new ast::GlobalPrototype(
+            new ast::FunctionType(
+                "printf",
+                std::vector<ast::Type *>({
+                    new ast::PointerType(
+                        new ast::IntType(8)
+                    )
+                }),
+                new ast::IntType(32),
+                true
+            ),
+            true
+        ),
+        new ast::GlobalFunction(
+            new ast::FunctionType(
+                "main",
+                std::vector<ast::Type *>(),
+                new ast::VoidType()
+            ),
+            new ast::Body({
+                new ast::Vardef(
+                    "testarray",
+                    new ast::ArrayConst(
+                        new ast::ArrayType(new ast::IntType(32), 2),
+                        std::vector<ast::Const *>({
+                            new ast::ArrayConst(
+                                new ast::ArrayType(new ast::IntType(32), 2),
+                                std::vector<ast::Const *>({
+                                    new ast::IntegerConst(1, 32),
+                                    new ast::IntegerConst(2, 32)
+                                })
+                            ),
+                            new ast::ArrayConst(
+                                new ast::ArrayType(new ast::IntType(32), 2),
+                                std::vector<ast::Const *>({
+                                    new ast::IntegerConst(3, 32),
+                                    new ast::IntegerConst(4, 32)
+                                })
+                            )
+                        })
+                    )
+                ),
+                new ast::Call(
+                    "printf",
+                    std::vector<ast::Value *>({
+                        new ast::StringConst("%d\n"),
+                        new ast::Arrget(
+                            new ast::Arrgetptr(
+                                new ast::GetVarPtr("testarray"),
+                                new ast::IntegerConst(0, 32)
+                            ),
+                            new ast::IntegerConst(1, 32)
+                        )
+                    })
+                )
+            }),
+            std::vector<std::string>()
+        )
+    });
 }

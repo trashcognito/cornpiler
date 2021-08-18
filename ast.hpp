@@ -236,24 +236,24 @@ namespace ast {
     class Arrget : public Value {
         public:
         Value *array;
-        std::vector<Value *> indexes;
+        Value *index;
         llvm::Value *codegen() const;
-        Arrget(Value *array, std::vector<Value *> indexes);
+        Arrget(Value *array, Value *index);
     };
     class Arrset : public Value {
         public:
         Value *array;
-        std::vector<Value *> indexes;
+        Value *index;
         Value *val;
         llvm::Value *codegen() const;
-        Arrset(Value *array, std::vector<Value *> indexes, Value *val);
+        Arrset(Value *array, Value *index, Value *val);
     };
     class Arrgetptr : public Value {
         public:
         Value *array;
-        std::vector<Value *> indexes;
+        Value *index;
         llvm::Value *codegen() const;
-        Arrgetptr(Value *array, std::vector<Value *> indexes);
+        Arrgetptr(Value *array, Value *indexes);
     };
 
     class GlobalEntry {
