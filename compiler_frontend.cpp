@@ -48,7 +48,7 @@ std::vector<ast::GlobalEntry *> get_program() {
             }
         }
     */
-    
+    /*
     return std::vector<ast::GlobalEntry *> ({
         new ast::GlobalFunction(
         new ast::FunctionType(
@@ -91,7 +91,47 @@ std::vector<ast::GlobalEntry *> get_program() {
         )
     )});
     
-    
+    */
+    //similar to above, with value if
+    return std::vector<ast::GlobalEntry *> ({
+        new ast::GlobalFunction(
+        new ast::FunctionType(
+            "some_thing",
+            std::vector<ast::Type *>(
+                {
+                    new ast::IntType(64)
+                }
+            ),
+            new ast::IntType(64)
+        ),
+        new ast::Body(
+            std::vector<ast::Value *>({
+                new ast::ReturnVal(
+                    new ast::If(
+                        new ast::Body(
+                            std::vector<ast::Value *>({
+                                new ast::IntegerConst(2, 64)
+                            })
+                        ), 
+                        new ast::Body(
+                            std::vector<ast::Value *>({
+                                new ast::IntegerConst(7, 64)
+                            })
+                        ), new ast::Operand(
+                            new ast::GetVar("first"), 
+                            new ast::IntegerConst(5, 64), 
+                            ast::Operand::OperandType::GT
+                        )
+                    )
+                )
+            })
+        ),
+        std::vector<std::string>(
+            {
+                "first"
+            }
+        )
+    )});
     /*
         extern int puts(const char *);
         void main() {
