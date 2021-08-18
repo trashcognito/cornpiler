@@ -222,7 +222,7 @@ std::vector<token> tokenize_program(char *program, int length, logger::logger *l
   return status.tokens;
 }
 
-int main() {
+int compile_main() {
   logger::logger logger(logger::LOG_LEVEL::DEBUG | logger::LOG_LEVEL::INFO | logger::LOG_LEVEL::WARNING | logger::LOG_LEVEL::ERROR | logger::LOG_LEVEL::NONE);
 
   logger.log(logger::LOG_LEVEL::DEBUG, "Logger Test");
