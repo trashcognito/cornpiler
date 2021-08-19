@@ -145,6 +145,12 @@ namespace ast {
         public:
         llvm::Constant *codegen() const = 0;
     };
+    class ValueConst : public Value {
+        public:
+        Value *value;
+        llvm::Constant *codegen() const;
+        ValueConst(Value* val);
+    };
     class IntegerConst : public Const {
         public:
         intmax_t from;

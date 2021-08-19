@@ -132,8 +132,81 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
     return that_ast;
   };
 
-  auto translate_data_types = [&]() {
+  std::function<ast::Type *(std::vector<scope_element>)> translate_data_types =
+      [&](std::vector<scope_element> scope) {
+        AST *current_scope =
+            (dynamic_cast<ast_body *>(goto_ast_scope(scope))->body[0]);
+        switch (dynamic_cast<AST_node *>(current_scope)->act) {
+        case act_type::type:
+          if (dynamic_cast<ast_types::in_type *>(current_scope)->type.value ==
+              "bool") {
+            return (ast::Type *)new ast::IntType(1);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "nibble") {
+            return (ast::Type *)new ast::IntType(4);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "byte") {
+            return (ast::Type *)new ast::IntType(8);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "word") {
+            return (ast::Type *)new ast::IntType(16);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "int") {
+            return (ast::Type *)new ast::IntType(32);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "int64") {
+            return (ast::Type *)new ast::IntType(64);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "int128") {
+            return (ast::Type *)new ast::IntType(128);
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "none") {
+            return (ast::Type *)new ast::VoidType();
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "str") {
+            logger->log(logger::LOG_LEVEL::WARNING,
+                        "String type not implemented yet");
+          } else if (dynamic_cast<ast_types::in_type *>(current_scope)
+                         ->type.value == "float") {
+            logger->log(logger::LOG_LEVEL::WARNING,
+                        "Float type not implemented yet");
+          }
+          break;
+        case act_type::outtype: {
+          std::vector<scope_element> new_scope = scope;
+          new_scope.push_back((scope_element)0);
+          new_scope.push_back(scope_element::type);
+          if (dynamic_cast<ast_types::out_type *>(current_scope)->name.value ==
+              "ptr") {
+            return (ast::Type *)new ast::PointerType(
+                translate_data_types(new_scope));
+          } else if (dynamic_cast<ast_types::out_type *>(current_scope)
+                         ->name.value == "arr") {
+            // return (ast::Type*)new
+            // ast::ArrayType(translate_data_types(new_scope));
+            logger->log(logger::LOG_LEVEL::WARNING,
+                        "Array type not implemented yet");
+          } else if (dynamic_cast<ast_types::out_type *>(current_scope)
+                         ->name.value == "unsigned") {
+            logger->log(logger::LOG_LEVEL::WARNING,
+                        "Unsigned type not implemented yet");
+          }
+          break;
+        }
+        }
+      };
 
+  auto recursive_translate_type = [&](std::vector<scope_element> scope) {
+    ast_body *curr_scope = dynamic_cast<ast_body *>(goto_ast_scope(scope));
+    std::vector<ast::Type *> types;
+    int i = 0;
+    for (auto e : curr_scope->body) {
+      std::vector<scope_element> new_scope = scope;
+      new_scope.push_back((scope_element)i);
+      new_scope.push_back(scope_element::type);
+      types.push_back(translate_data_types(new_scope));
+    }
+    return types;
   };
 
   std::function<std::vector<ast::Value *>(std::vector<scope_element> scope)>
@@ -145,68 +218,111 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
         for (auto e : curr_scope->body) {
           switch (((AST_node *)e)->act) {
           case act_type::statement:
-            if(dynamic_cast<ast_types::statement *>(e)->name.value == "return"){
-              if(dynamic_cast<ast_types::statement *>(e)->args.body.size() == 0){
-                args.push_back((ast::Value*)new ast::ReturnNull());
-              }else{
+            if (dynamic_cast<ast_types::statement *>(e)->name.value ==
+                "return") {
+              if (dynamic_cast<ast_types::statement *>(e)->args.body.size() ==
+                  0) {
+                args.push_back((ast::Value *)new ast::ReturnNull());
+              } else {
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)i);
                 new_scope.push_back(scope_element::args);
-                args.push_back((ast::Value*)new ast::ReturnVal(recursive_translate_body(new_scope)[0]));
+                args.push_back((ast::Value *)new ast::ReturnVal(
+                    recursive_translate_body(new_scope)[0]));
               }
-            }else if(dynamic_cast<ast_types::statement *>(e)->name.value == "deref"){
-              
+            } else if (dynamic_cast<ast_types::statement *>(e)->name.value ==
+                       "deref") {
+
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::args);
+              args.push_back((ast::Value *)new ast::Deref(
+                  recursive_translate_body(new_scope)[0]));
             }
-          break;
+            break;
           case act_type::statement_with_body:
-            if(dynamic_cast<ast_types::statement_with_body *>(e)->name.value == "while"){
-                std::vector<scope_element> new_scope_args = scope;
-                new_scope_args.push_back((scope_element)i);
-                new_scope_args.push_back(scope_element::args);
+            if (dynamic_cast<ast_types::statement_with_body *>(e)->name.value ==
+                "while") {
+              std::vector<scope_element> new_scope_args = scope;
+              new_scope_args.push_back((scope_element)i);
+              new_scope_args.push_back(scope_element::args);
 
-                std::vector<scope_element> new_scope_body = scope;
-                new_scope_body.push_back((scope_element)i);
-                new_scope_body.push_back(scope_element::body);
+              std::vector<scope_element> new_scope_body = scope;
+              new_scope_body.push_back((scope_element)i);
+              new_scope_body.push_back(scope_element::body);
 
-                args.push_back((ast::Value*)new ast::While(
+              args.push_back((ast::Value *)new ast::While(
                   new ast::Body(recursive_translate_body(new_scope_body)),
                   recursive_translate_body(new_scope_args)[0]));
             }
-          break;
+            break;
           case act_type::statement_with_two_bodies:
-            if(dynamic_cast<ast_types::statement_with_two_bodies *>(e)->name.value == "if"){
-                std::vector<scope_element> new_scope_args = scope;
-                new_scope_args.push_back((scope_element)i);
-                new_scope_args.push_back(scope_element::args);
+            if (dynamic_cast<ast_types::statement_with_two_bodies *>(e)
+                    ->name.value == "if") {
+              std::vector<scope_element> new_scope_args = scope;
+              new_scope_args.push_back((scope_element)i);
+              new_scope_args.push_back(scope_element::args);
 
-                std::vector<scope_element> new_scope_body = scope;
-                new_scope_body.push_back((scope_element)i);
-                new_scope_body.push_back(scope_element::body);
+              std::vector<scope_element> new_scope_body = scope;
+              new_scope_body.push_back((scope_element)i);
+              new_scope_body.push_back(scope_element::body);
 
-                std::vector<scope_element> new_scope_second_body = scope;
-                new_scope_second_body.push_back((scope_element)i);
-                new_scope_second_body.push_back(scope_element::second_body);
+              std::vector<scope_element> new_scope_second_body = scope;
+              new_scope_second_body.push_back((scope_element)i);
+              new_scope_second_body.push_back(scope_element::second_body);
 
-                args.push_back((ast::Value*)new ast::If(
+              args.push_back((ast::Value *)new ast::If(
                   new ast::Body(recursive_translate_body(new_scope_body)),
-                  new ast::Body(recursive_translate_body(new_scope_second_body)),
-                  recursive_translate_body(new_scope_args)[0]
-                ));
+                  new ast::Body(
+                      recursive_translate_body(new_scope_second_body)),
+                  recursive_translate_body(new_scope_args)[0]));
             }
-          break;
+            break;
           case act_type::varop:
-            if(dynamic_cast<ast_types::varop *>(e)->name.value == "ref"){
-              args.push_back((ast::Value*)new ast::GetVarPtr(
-                dynamic_cast<ast_types::varop *>(e)->var.value
-              ));
-            }else if(dynamic_cast<ast_types::varop *>(e)->name.value == "deref"){
-              // TODO: uncomment
-              // args.push_back((ast::Value*)new ast::Deref(
-              //   dynamic_cast<ast_types::varop *>(e)->var.value
-              // ));
+            if (dynamic_cast<ast_types::varop *>(e)->name.value == "ref") {
+              args.push_back((ast::Value *)new ast::GetVarPtr(
+                  dynamic_cast<ast_types::varop *>(e)->var.value));
             }
-
-          break;
+            break;
+          case act_type::vardef:
+            args.push_back((ast::Value *)new ast::Vardef(
+                dynamic_cast<ast_types::vardef *>(e)->name.value,
+                (ast::Const *)new ast::ValueConst(recursive_translate_body(
+                    {scope_element::global, (scope_element)i,
+                     scope_element::args})[0])));
+            break;
+          case act_type::call:
+            args.push_back((ast::Value *)new ast::Call(
+                dynamic_cast<ast_types::call *>(e)->name.value, [&] {
+                  std::vector<scope_element> new_scope = scope;
+                  scope.push_back((scope_element)i);
+                  scope.push_back(scope_element::args);
+                  return recursive_translate_body(new_scope);
+                }()));
+            break;
+          case act_type::varset:
+            args.push_back((ast::Value *)new ast::Varset(
+                dynamic_cast<ast_types::varset *>(e)->name.value,
+                (ast::Const *)new ast::ValueConst(recursive_translate_body(
+                    {scope_element::global, (scope_element)i,
+                     scope_element::args})[0])));
+            break;
+            case act_type::getvar:
+            args.push_back((ast::Value *)new ast::GetVar(
+                dynamic_cast<ast_types::getvar *>(e)->name.value)
+            );
+            break;
+            case act_type::const_str:
+              args.push_back((ast::Value *)new ast::StringConst(
+                dynamic_cast<ast_types::const_str *>(e)->value.value)
+              );
+            break;
+            case act_type::const_int:
+              args.push_back((ast::Value *)new ast::IntegerConst(dynamic_cast<ast_types::const_int *>(e)->value.value, 64));
+            break;
+            case act_type::oper:
+            
+            break;
           }
           i++;
         }
@@ -214,18 +330,58 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
       };
 
   auto recursive_translate_global = [&] {
+    std::vector<ast::GlobalEntry *> global_entries;
     ast_body *curr_scope =
         dynamic_cast<ast_body *>(goto_ast_scope({scope_element::global}));
+    int i = 0;
     for (auto &e : curr_scope->body) {
       switch (((AST_node *)e)->act) {
       case act_type::fundef:
-        return (ast::GlobalEntry *)new ast::GlobalFunction(
+        global_entries.push_back((ast::GlobalEntry *)new ast::GlobalFunction(
             new ast::FunctionType(
                 dynamic_cast<ast_types::fundef *>(e)->name.value,
-                std::vector<ast::Type *>(), new ast::IntType(32)),
-            new ast::Body({}), std::vector<std::string>());
+                recursive_translate_type({scope_element::global,
+                                          (scope_element)i,
+                                          scope_element::argtype}),
+                translate_data_types({scope_element::global, (scope_element)i,
+                                      scope_element::return_type})),
+            new ast::Body(recursive_translate_body({scope_element::global,
+                                                    (scope_element)i,
+                                                    scope_element::body})),
+            [&] {
+              std::vector<std::string> args;
+              for (auto &a :
+                   dynamic_cast<ast_body *>(
+                       goto_ast_scope({scope_element::global, (scope_element)i,
+                                       scope_element::argtype}))
+                       ->body) {
+                args.push_back(
+                    dynamic_cast<ast_types::arg_with_type_t *>(a)->name.value);
+              }
+              return args;
+            }()));
+        break;
+      case act_type::extdef:
+        global_entries.push_back((ast::GlobalEntry *)new ast::GlobalPrototype(
+            new ast::FunctionType(
+                dynamic_cast<ast_types::fundef *>(e)->name.value,
+                recursive_translate_type({scope_element::global,
+                                          (scope_element)i,
+                                          scope_element::argtype}),
+                translate_data_types({scope_element::global, (scope_element)i,
+                                      scope_element::return_type})),
+            true));
+        break;
+      case act_type::glbdef:
+        global_entries.push_back((ast::GlobalEntry *)new ast::GlobalVariable(
+            dynamic_cast<ast_types::glbdef *>(e)->name.value,
+            (ast::Const *)new ast::ValueConst(recursive_translate_body(
+                {scope_element::global, (scope_element)i,
+                 scope_element::args})[0]),
+            false));
         break;
       }
+      i++;
     }
   };
 

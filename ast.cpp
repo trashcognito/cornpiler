@@ -271,6 +271,10 @@ namespace ast {
     }
 
     //TODO: split off Const to different types to offload the work to the lexer?
+    ValueConst::ValueConst(Value *val) {
+        this->value = val;
+    }
+    
     FloatConst::FloatConst(float f) {
         this->from = f;
     }

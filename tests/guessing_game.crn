@@ -1,23 +1,22 @@
 fun main => none {
     rand_start()
-    var i5 picked = rand_range(1, 128)
-    var i5 total_guesses = 0
+    var int picked = rand_range(1, 128)
+    var int total_guesses = 0
     while(true) {
         total_guesses += 1
-        var lstvar 20 i3 guess
+        var arr[20] int guess
         init_arr(guess, 20, 0)
-        var i5 counter = 0
+        var int counter = 0
         print("Your guess: ")
         while(true) {
-            var i3 inchr = inchar()
-            if(inchr == "\n"[0]){
+            var byte inchr = inchar()
+            if(inchr == '\n'){
                 break
             }
             arr_set_index(guess, counter, inchr)
             counter += 1
         }
-        var i5 g_int = to_int(guess)
-        println("guessed $n".fmt(g_int))
+        var int g_int = to_int(guess)
         if (g_int == picked) {
             break
         }

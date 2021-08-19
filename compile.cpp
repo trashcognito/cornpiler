@@ -466,7 +466,7 @@ ast_types::global_scope lex_program(file_object input_file,
               default:
 
                 logger->log(logger::LOG_LEVEL::ERROR,
-                            "\nInvalid scope element");
+                            "\nInvalid scope element: " + std::to_string((int)s));
                 exit(0);
               }
             }
@@ -683,6 +683,7 @@ ast_types::global_scope lex_program(file_object input_file,
             } else if (initial_token.value == "str" ||
                        initial_token.value == "none" ||
                        initial_token.value == "bool" ||
+                       initial_token.value == "nibble" ||
                        initial_token.value == "byte" ||
                        initial_token.value == "word" ||
                        initial_token.value == "int" ||
