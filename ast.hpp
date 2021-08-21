@@ -240,7 +240,8 @@ namespace ast {
         public:
         Value *arg;
         enum UOps {
-            NOT
+            NOT,
+            NEG
         };
         UOps op;
         llvm::Value *codegen() const;

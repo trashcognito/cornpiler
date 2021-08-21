@@ -238,6 +238,22 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               new_scope.push_back(scope_element::args);
               args.push_back((ast::Value *)new ast::Deref(
                   recursive_translate_body(new_scope)[0]));
+            }else if(dynamic_cast<ast_types::statement *>(e)->name.value == "neg"){
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::args);
+              args.push_back((ast::Value *)new ast::UnaryOp(
+                ast::UnaryOp::UOps::NEG,
+                recursive_translate_body(new_scope)[0]
+              ));
+            }else if(dynamic_cast<ast_types::statement *>(e)->name.value == "not"){
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::args);
+              args.push_back((ast::Value *)new ast::UnaryOp(
+                ast::UnaryOp::UOps::NOT,
+                recursive_translate_body(new_scope)[0]
+              ));
             }
             break;
           case act_type::statement_with_body:
@@ -307,22 +323,49 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                     {scope_element::global, (scope_element)i,
                      scope_element::args})[0])));
             break;
-            case act_type::getvar:
+          case act_type::getvar:
             args.push_back((ast::Value *)new ast::GetVar(
-                dynamic_cast<ast_types::getvar *>(e)->name.value)
-            );
+                dynamic_cast<ast_types::getvar *>(e)->name.value));
             break;
-            case act_type::const_str:
-              args.push_back((ast::Value *)new ast::StringConst(
-                dynamic_cast<ast_types::const_str *>(e)->value.value)
-              );
+          case act_type::const_str:
+            args.push_back((ast::Value *)new ast::StringConst(
+                dynamic_cast<ast_types::const_str *>(e)->value.value));
             break;
-            case act_type::const_int:
-              args.push_back((ast::Value *)new ast::IntegerConst(dynamic_cast<ast_types::const_int *>(e)->value.value, 64));
+          case act_type::const_int:
+            args.push_back((ast::Value *)new ast::IntegerConst(
+                dynamic_cast<ast_types::const_int *>(e)->value.value, 64));
             break;
-            case act_type::oper:
-            
+          case act_type::oper: {
+            std::vector<scope_element> new_scope = scope;
+            new_scope.push_back((scope_element)i);
+            new_scope.push_back(scope_element::args);
+            args.push_back((ast::Value *)new ast::Operand(
+                recursive_translate_body(new_scope)[0],
+                recursive_translate_body(new_scope)[1],
+                [&]{
+                  std::string op = (dynamic_cast<ast_types::oper*>(e))->op.value;
+                  if(op == "+") return ast::Operand::OperandType::ADD;
+                  if(op == "-") return ast::Operand::OperandType::SUB;
+                  if(op == "*") return ast::Operand::OperandType::MUL;
+                  if(op == "/") return ast::Operand::OperandType::DIV;
+                  if(op == "%") return ast::Operand::OperandType::MOD;
+                  if(op == ">") return ast::Operand::OperandType::GT;
+                  if(op == "<") return ast::Operand::OperandType::LT;
+                  if(op == ">=") return ast::Operand::OperandType::GE;
+                  if(op == "<=") return ast::Operand::OperandType::LE;
+                  if(op == "==") return ast::Operand::OperandType::EQ;
+                  if(op == "!=") return ast::Operand::OperandType::NEQ;
+                  if(op == "&") return ast::Operand::OperandType::BITAND;
+                  if(op == "|") return ast::Operand::OperandType::BITOR;
+                  if(op == "&&") return ast::Operand::OperandType::BOOL_AND;
+                  if(op == "||") return ast::Operand::OperandType::BOOL_OR;
+                  if(op == "^") return ast::Operand::OperandType::XOR;
+                }()
+                ));
             break;
+          }
+          case act_type::expr:
+          break;
           }
           i++;
         }
