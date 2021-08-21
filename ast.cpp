@@ -20,14 +20,13 @@
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
     llvm::Value *Vardef::codegen() const {
-        auto value = val->codegen();
-        auto var_storage = Builder->CreateAlloca(value->getType());
-        Builder->CreateStore(value, var_storage);
+        auto type = ty->get_type();
+        auto var_storage = Builder->CreateAlloca(type);
         LocalScope.back()[varname] = var_storage;
-        return value;
+        return llvm::PoisonValue::get(type);
     }
-    Vardef::Vardef(std::string varname, Value *val) {
-        this->val = val;
+    Vardef::Vardef(std::string varname, Type *type) {
+        this->ty = type;
         this->varname = varname;
     }
     //************MAP DEBUGGING
@@ -233,6 +232,12 @@ namespace ast {
         this->inside = inside;
         this->length = len;
     }
+    FloatType::FloatType() {
+
+    }
+    llvm::Type *FloatType::get_type() const {
+        return llvm::Type::getFloatTy(*TheContext);
+    }
 
     llvm::Type * ArrayType::get_type() const {
         return llvm::ArrayType::get(
@@ -315,8 +320,9 @@ namespace ast {
             init_array.push_back((*it)->codegen());
         }
         auto constval = llvm::ConstantArray::get(llvm::ArrayType::get(this->t->get_type(), this->getfrom.size()), init_array);
-        auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
-        return globconst;
+        //auto globconst = new llvm::GlobalVariable(*TheModule, constval->getType(), true, llvm::GlobalValue::PrivateLinkage, constval);
+        //return globconst;
+        return constval;
     };
 
     Operand::Operand(Value *lhs, Value *rhs, OperandType op) {
@@ -526,7 +532,7 @@ namespace ast {
     llvm::Value *Arrgetptr::codegen() const {
         auto arrval = this->array->codegen();
         auto idx = this->index->codegen();
-        auto gepval = Builder->CreateGEP(arrval, idx);
+        auto gepval = Builder->CreateGEP(arrval, std::vector<llvm::Value *>({ast::IntegerConst(0, 32).codegen(), idx}));
         //TODO: dont assume the underlying indexed type is an array
         auto elem_type = arrval->getType()->getPointerElementType();
         if (elem_type->getTypeID() == llvm::Type::TypeID::ArrayTyID) {

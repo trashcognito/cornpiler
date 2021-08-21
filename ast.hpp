@@ -34,14 +34,6 @@ namespace ast {
 
     using ValueArray=std::vector<Value *>;
 
-    class Vardef : public Value {
-        public:
-        std::string varname;
-        Value *val;
-        llvm::Value *codegen() const;
-        Vardef(std::string varname, Value *val);
-    };
-
     class Varset : public Value {
         public:
         std::string name;
@@ -92,10 +84,24 @@ namespace ast {
         virtual llvm::Type *get_type() const = 0;
     };
 
+    class Vardef : public Value {
+        public:
+        std::string varname;
+        Type *ty;
+        llvm::Value *codegen() const;
+        Vardef(std::string varname, Type *type);
+    };
+
     class IntType : public Type {
         public:
         int bits;
         IntType(int bits);
+        llvm::Type *get_type() const;
+    };
+
+    class FloatType : public Type {
+        public:
+        FloatType();
         llvm::Type *get_type() const;
     };
 
