@@ -240,14 +240,14 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                 new_scope.push_back((scope_element)i);
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value *)new ast::UnaryOp(
-                    ast::UnaryOp::UOps::NEG,
+                    ast::UOps::NEG,
                     recursive_translate_body(new_scope)[0]));
               } else if (dynamic_cast<ast_types::statement *>(e)->name.value == "not") {
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)i);
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value *)new ast::UnaryOp(
-                    ast::UnaryOp::UOps::NOT,
+                    ast::UOps::NOT,
                     recursive_translate_body(new_scope)[0]));
               }
               break;
@@ -341,22 +341,22 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   recursive_translate_body(new_scope)[1],
                   [&] {
                     std::string op = (dynamic_cast<ast_types::oper *>(e))->op.value;
-                    if (op == "+") return ast::Operand::OperandType::ADD;
-                    if (op == "-") return ast::Operand::OperandType::SUB;
-                    if (op == "*") return ast::Operand::OperandType::MUL;
-                    if (op == "/") return ast::Operand::OperandType::DIV;
-                    if (op == "%") return ast::Operand::OperandType::MOD;
-                    if (op == ">") return ast::Operand::OperandType::GT;
-                    if (op == "<") return ast::Operand::OperandType::LT;
-                    if (op == ">=") return ast::Operand::OperandType::GE;
-                    if (op == "<=") return ast::Operand::OperandType::LE;
-                    if (op == "==") return ast::Operand::OperandType::EQ;
-                    if (op == "!=") return ast::Operand::OperandType::NEQ;
-                    if (op == "&") return ast::Operand::OperandType::BITAND;
-                    if (op == "|") return ast::Operand::OperandType::BITOR;
-                    if (op == "&&") return ast::Operand::OperandType::BOOL_AND;
-                    if (op == "||") return ast::Operand::OperandType::BOOL_OR;
-                    if (op == "^") return ast::Operand::OperandType::XOR;
+                    if (op == "+") return ast::OperandType::ADD;
+                    if (op == "-") return ast::OperandType::SUB;
+                    if (op == "*") return ast::OperandType::MUL;
+                    if (op == "/") return ast::OperandType::DIV;
+                    if (op == "%") return ast::OperandType::MOD;
+                    if (op == ">") return ast::OperandType::GT;
+                    if (op == "<") return ast::OperandType::LT;
+                    if (op == ">=") return ast::OperandType::GE;
+                    if (op == "<=") return ast::OperandType::LE;
+                    if (op == "==") return ast::OperandType::EQ;
+                    if (op == "!=") return ast::OperandType::NEQ;
+                    if (op == "&") return ast::OperandType::BITAND;
+                    if (op == "|") return ast::OperandType::BITOR;
+                    if (op == "&&") return ast::OperandType::BOOL_AND;
+                    if (op == "||") return ast::OperandType::BOOL_OR;
+                    if (op == "^") return ast::OperandType::XOR;
                   }()));
               break;
             }
