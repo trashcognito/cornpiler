@@ -163,7 +163,7 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
             } else if (dynamic_cast<ast_types::in_type *>(current_scope)
                            ->type.value == "str") {
               logger->log(logger::LOG_LEVEL::WARNING,
-                          "String type not implemented yet");
+                          "String type will be implemented in the standard library");
             } else if (dynamic_cast<ast_types::in_type *>(current_scope)
                            ->type.value == "float") {
               logger->log(logger::LOG_LEVEL::WARNING,
