@@ -19,6 +19,9 @@
 
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
+    Const* Value::to_const() {
+        return dynamic_cast<Const *>(this);
+    }
     llvm::Value *Vardef::codegen() const {
         auto type = ty->get_type();
         auto var_storage = Builder->CreateAlloca(type);
@@ -330,6 +333,15 @@ namespace ast {
         this->arg2 = rhs;
         this->op = op;
     }
+    Const *Operand::to_const() {
+        auto const1 = arg1->to_const();
+        if (!const1) return nullptr;
+
+        auto const2 = arg2->to_const();
+        if (!const2) return nullptr;
+        
+        return new ConstOperand(const1, const2, this->op);
+    }
 
     llvm::Value *Operand::codegen() const {
         auto val1 = arg1->codegen();
@@ -345,36 +357,36 @@ namespace ast {
         //} else if (val2->getType()->isFloatingPointTy()) {
         //    throw "Float and int ops are incompatible!";
         //}
-        if (val1->getType()->isFloatingPointTy() || val1->getType()->isFloatingPointTy()) {
+        if (val1->getType()->isFloatingPointTy() || val2->getType()->isFloatingPointTy()) {
             float_op = true;
         }
         if (float_op) {
             switch(op) {
-                case LT:
+                case OperandType::LT:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_OLT, val1, val2);
                 break;
-                case GT:
+                case OperandType::GT:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_OGT, val1, val2);
                 break;
-                case LE:
+                case OperandType::LE:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_OLE, val1, val2);
                 break;
-                case GE:
+                case OperandType::GE:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_OGE, val1, val2);
                 break;
-                case ADD:
+                case OperandType::ADD:
                     return Builder->CreateFAdd(val1, val2);
                 break;
-                case SUB:
+                case OperandType::SUB:
                     return Builder->CreateFSub(val1, val2);
                 break;
-                case DIV:
+                case OperandType::DIV:
                     return Builder->CreateFDiv(val1, val2);
                 break;
-                case MUL:
+                case OperandType::MUL:
                     return Builder->CreateFMul(val1, val2);
                 break;
-                case MOD:
+                case OperandType::MOD:
                     throw "Cannot create floating point modulo!";
                     //return Builder->CreateSub(val1, 
                     //    Builder->CreateMul(val1, 
@@ -382,90 +394,90 @@ namespace ast {
                     //    )
                     //);
                 break;
-                case BITAND:
+                case OperandType::BITAND:
                     return Builder->CreateAnd(val1, val2);
                 break;
-                case BITOR:
+                case OperandType::BITOR:
                     return Builder->CreateOr(val1, val2);
                 break;
-                case XOR:
+                case OperandType::XOR:
                     return Builder->CreateXor(val1, val2);
                 break;
-                case EQ:
+                case OperandType::EQ:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_OEQ, val1, val2);
                 break;
-                case NEQ:
+                case OperandType::NEQ:
                     return Builder->CreateFCmp(llvm::CmpInst::Predicate::FCMP_ONE, val1, val2);
                 break;
-                case BOOL_OR:
+                case OperandType::BOOL_OR:
                     return Builder->CreateOr(
                         Builder->CreateBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
                         Builder->CreateBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
                         );
                 break;
-                case BOOL_AND:
+                case OperandType::BOOL_AND:
                         return Builder->CreateAnd(
                         Builder->CreateBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
                         Builder->CreateBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
                         );
                 break;
-            }
+                }
         } else {
             //integer operations
             switch(op) {
-                case LT:
+                case OperandType::LT:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_SLT, val1, val2);
                 break;
-                case GT:
+                case OperandType::GT:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_SGT, val1, val2);
                 break;
-                case LE:
+                case OperandType::LE:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_SLE, val1, val2);
                 break;
-                case GE:
+                case OperandType::GE:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_SGE, val1, val2);
                 break;
-                case ADD:
+                case OperandType::ADD:
                     return Builder->CreateAdd(val1, val2);
                 break;
-                case SUB:
+                case OperandType::SUB:
                     return Builder->CreateSub(val1, val2);
                 break;
-                case DIV:
+                case OperandType::DIV:
                     return Builder->CreateSDiv(val1, val2);
                 break;
-                case MUL:
+                case OperandType::MUL:
                     return Builder->CreateMul(val1, val2);
                 break;
-                case MOD:
+                case OperandType::MOD:
                     return Builder->CreateSub(val1, 
                         Builder->CreateMul(val1, 
                             Builder->CreateSDiv(val1, val2)
                         )
                     );
                 break;
-                case BITAND:
+                case OperandType::BITAND:
                     return Builder->CreateAnd(val1, val2);
                 break;
-                case BITOR:
+                case OperandType::BITOR:
                     return Builder->CreateOr(val1, val2);
                 break;
-                case XOR:
+                case OperandType::XOR:
                     return Builder->CreateXor(val1, val2);
                 break;
-                case EQ:
+                case OperandType::EQ:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_EQ, val1, val2);
                 break;
-                case NEQ:
+                case OperandType::NEQ:
                     return Builder->CreateCmp(llvm::CmpInst::Predicate::ICMP_NE, val1, val2);
                 break;
-                case BOOL_OR:
+                case OperandType::BOOL_OR:
                     return Builder->CreateOr(
                         Builder->CreateBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
                         Builder->CreateBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
                         );
                 break;
-                case BOOL_AND:
+                case OperandType::BOOL_AND:
                         return Builder->CreateAnd(
                         Builder->CreateBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
                         Builder->CreateBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
@@ -520,12 +532,18 @@ namespace ast {
     llvm::Value *UnaryOp::codegen() const {
         auto val = arg->codegen();
         switch (op) {
-            case NOT:
+            case UOps::NOT:
                 return Builder->CreateNot(val);
-            case NEG:
+            case UOps::NEG:
                 return Builder->CreateNeg(val);
             break;
         }
+    }
+
+    Const *UnaryOp::to_const() {
+        auto const1 = arg->to_const();
+        if (!const1) return nullptr;
+        return new ConstUnaryOp(this->op, const1);
     }
     Arrgetptr::Arrgetptr(Value *array, Value *index) {
         this->array = array;
@@ -536,6 +554,9 @@ namespace ast {
     }
     llvm::Value *Expr::codegen() const {
         return this->actual->codegen();
+    }
+    Const *Expr::to_const() {
+        return this->actual->to_const();
     }
     llvm::Value *Arrgetptr::codegen() const {
         auto arrval = this->array->codegen();
@@ -575,6 +596,7 @@ namespace ast {
     }
     llvm::Value *ArrDef::codegen() const {
         auto type = this->inner_type->get_type();
+        
         auto var_storage = Builder->CreateAlloca(type, this->length->codegen());
         LocalScope.back()[this->name] = var_storage;
         return llvm::PoisonValue::get(type);
@@ -646,5 +668,166 @@ namespace ast {
     void GlobalVariable::codegen() const {
         auto val = this->value->codegen();
         auto the_var = new llvm::GlobalVariable(*TheModule, val->getType(), this->constant, llvm::GlobalObject::ExternalLinkage, val, this->name);
+    }
+    ConstUnaryOp::ConstUnaryOp(UOps operand, Const *arg) {
+        this->op = operand;
+        this->arg = arg;
+    }
+    llvm::Constant *ConstUnaryOp::codegen() const {
+        auto arg1 = this->arg->codegen();
+        switch(this->op) {
+            case UOps::NOT:
+                return llvm::ConstantExpr::getNot(arg1);
+            case UOps::NEG:
+                return llvm::ConstantExpr::getNeg(arg1);
+        }
+    }
+    ConstOperand::ConstOperand(Const *lhs, Const *rhs, OperandType op) {
+        this->arg1 = lhs;
+        this->arg2 = rhs;
+        this->op = op;
+    }
+    llvm::Constant *ConstOperand::codegen() const {
+        auto val1 = arg1->codegen();
+        auto val2 = arg2->codegen();
+        bool float_op = false;
+        //strict type checking
+        //if (val1->getType()->isFloatingPointTy()) {
+        //    if (val2->getType()->isFloatingPointTy()) {
+        //        float_op = true;
+        //    } else {
+        //        throw "Float and int ops are incompatible!";
+        //    }
+        //} else if (val2->getType()->isFloatingPointTy()) {
+        //    throw "Float and int ops are incompatible!";
+        //}
+        if (val1->getType()->isFloatingPointTy() || val2->getType()->isFloatingPointTy()) {
+            float_op = true;
+        }
+        if (float_op) {
+            switch(op) {
+                case OperandType::LT:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_OLT, val1, val2);
+                break;
+                case OperandType::GT:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_OGT, val1, val2);
+                break;
+                case OperandType::LE:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_OLE, val1, val2);
+                break;
+                case OperandType::GE:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_OGE, val1, val2);
+                break;
+                case OperandType::ADD:
+                    return llvm::ConstantExpr::getFAdd(val1, val2);
+                break;
+                case OperandType::SUB:
+                    return llvm::ConstantExpr::getFSub(val1, val2);
+                break;
+                case OperandType::DIV:
+                    return llvm::ConstantExpr::getFDiv(val1, val2);
+                break;
+                case OperandType::MUL:
+                    return llvm::ConstantExpr::getFMul(val1, val2);
+                break;
+                case OperandType::MOD:
+                    throw "Cannot create floating point modulo!";
+                    //return llvm::ConstantExpr::getSub(val1, 
+                    //    llvm::ConstantExpr::getMul(val1, 
+                    //        llvm::ConstantExpr::getSDiv(val1, val2)
+                    //    )
+                    //);
+                break;
+                case OperandType::BITAND:
+                    return llvm::ConstantExpr::getAnd(val1, val2);
+                break;
+                case OperandType::BITOR:
+                    return llvm::ConstantExpr::getOr(val1, val2);
+                break;
+                case OperandType::XOR:
+                    return llvm::ConstantExpr::getXor(val1, val2);
+                break;
+                case OperandType::EQ:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_OEQ, val1, val2);
+                break;
+                case OperandType::NEQ:
+                    return llvm::ConstantExpr::getFCmp(llvm::CmpInst::Predicate::FCMP_ONE, val1, val2);
+                break;
+                case OperandType::BOOL_OR:
+                    return llvm::ConstantExpr::getOr(
+                        llvm::ConstantExpr::getBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
+                        llvm::ConstantExpr::getBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
+                        );
+                break;
+                case OperandType::BOOL_AND:
+                        return llvm::ConstantExpr::getAnd(
+                        llvm::ConstantExpr::getBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
+                        llvm::ConstantExpr::getBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
+                        );
+                break;
+                }
+        } else {
+            //integer operations
+            switch(op) {
+                case OperandType::LT:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_SLT, val1, val2);
+                break;
+                case OperandType::GT:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_SGT, val1, val2);
+                break;
+                case OperandType::LE:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_SLE, val1, val2);
+                break;
+                case OperandType::GE:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_SGE, val1, val2);
+                break;
+                case OperandType::ADD:
+                    return llvm::ConstantExpr::getAdd(val1, val2);
+                break;
+                case OperandType::SUB:
+                    return llvm::ConstantExpr::getSub(val1, val2);
+                break;
+                case OperandType::DIV:
+                    return llvm::ConstantExpr::getSDiv(val1, val2);
+                break;
+                case OperandType::MUL:
+                    return llvm::ConstantExpr::getMul(val1, val2);
+                break;
+                case OperandType::MOD:
+                    return llvm::ConstantExpr::getSub(val1, 
+                        llvm::ConstantExpr::getMul(val1, 
+                            llvm::ConstantExpr::getSDiv(val1, val2)
+                        )
+                    );
+                break;
+                case OperandType::BITAND:
+                    return llvm::ConstantExpr::getAnd(val1, val2);
+                break;
+                case OperandType::BITOR:
+                    return llvm::ConstantExpr::getOr(val1, val2);
+                break;
+                case OperandType::XOR:
+                    return llvm::ConstantExpr::getXor(val1, val2);
+                break;
+                case OperandType::EQ:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_EQ, val1, val2);
+                break;
+                case OperandType::NEQ:
+                    return llvm::ConstantExpr::getICmp(llvm::CmpInst::Predicate::ICMP_NE, val1, val2);
+                break;
+                case OperandType::BOOL_OR:
+                    return llvm::ConstantExpr::getOr(
+                        llvm::ConstantExpr::getBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
+                        llvm::ConstantExpr::getBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
+                        );
+                break;
+                case OperandType::BOOL_AND:
+                        return llvm::ConstantExpr::getAnd(
+                        llvm::ConstantExpr::getBitCast(val1, llvm::IntegerType::get(*TheContext, 1)), 
+                        llvm::ConstantExpr::getBitCast(val2, llvm::IntegerType::get(*TheContext, 1))
+                        );
+                break;
+            }
+        }
     }
 }

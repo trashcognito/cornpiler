@@ -27,10 +27,34 @@ extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
 extern std::unique_ptr<llvm::Module> TheModule;
 namespace ast {
+    enum class OperandType {
+        LT,
+        GT,
+        LE,
+        GE,
+        ADD,
+        SUB,
+        DIV,
+        MUL,
+        MOD,
+        BITAND,
+        BITOR,
+        XOR,
+        EQ,
+        NEQ,
+        BOOL_OR,
+        BOOL_AND
+    };
+    enum class UOps {
+        NOT,
+        NEG
+    };
+
+    class Const;
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
-        virtual Const* to_const() = 0;
+        virtual Const* to_const();
     };
 
     using ValueArray=std::vector<Value *>;
@@ -160,6 +184,21 @@ namespace ast {
         public:
         llvm::Constant *codegen() const = 0;
     };
+    class ConstOperand : public Const {
+        public:
+        OperandType op;
+        Const *arg1;
+        Const *arg2;
+        llvm::Constant *codegen() const;
+        ConstOperand(Const *lhs, Const *rhs, OperandType op);
+    };
+    class ConstUnaryOp : public Const {
+        public:
+        Const *arg;
+        UOps op;
+        llvm::Constant *codegen() const;
+        ConstUnaryOp(UOps operand, Const *arg);
+    };
     class ValueConst : public Value {
         public:
         Value *value;
@@ -197,28 +236,12 @@ namespace ast {
 
     class Operand : public Value {
         public:
-        enum OperandType {
-            LT,
-            GT,
-            LE,
-            GE,
-            ADD,
-            SUB,
-            DIV,
-            MUL,
-            MOD,
-            BITAND,
-            BITOR,
-            XOR,
-            EQ,
-            NEQ,
-            BOOL_OR,
-            BOOL_AND
-        };
+        
         OperandType op;
         Value *arg1;
         Value *arg2;
         llvm::Value *codegen() const;
+        Const* to_const();
         Operand(Value *lhs, Value *rhs, OperandType op);
     };
 
@@ -254,12 +277,10 @@ namespace ast {
     class UnaryOp : public Value {
         public:
         Value *arg;
-        enum UOps {
-            NOT,
-            NEG
-        };
+        
         UOps op;
         llvm::Value *codegen() const;
+        Const* to_const();
         UnaryOp(UOps operand, Value *arg);
     };
     class Arrget : public Value {
@@ -288,6 +309,7 @@ namespace ast {
         public:
         Value *actual;
         llvm::Value *codegen() const;
+        Const* to_const();
         Expr(Value *inner);
     };
 
