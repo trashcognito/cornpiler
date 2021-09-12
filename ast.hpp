@@ -30,6 +30,7 @@ namespace ast {
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
+        virtual Const* to_const() = 0;
     };
 
     using ValueArray=std::vector<Value *>;
