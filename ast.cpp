@@ -522,12 +522,20 @@ namespace ast {
         switch (op) {
             case NOT:
                 return Builder->CreateNot(val);
+            case NEG:
+                return Builder->CreateNeg(val);
             break;
         }
     }
     Arrgetptr::Arrgetptr(Value *array, Value *index) {
         this->array = array;
         this->index = index;
+    }
+    Expr::Expr(Value *inner) {
+        this->actual = inner;
+    }
+    llvm::Value *Expr::codegen() const {
+        return this->actual->codegen();
     }
     llvm::Value *Arrgetptr::codegen() const {
         auto arrval = this->array->codegen();
@@ -559,6 +567,17 @@ namespace ast {
         this->array = array;
         this->index = index;
         this->val = val;
+    }
+    ArrDef::ArrDef(std::string name, Type *inner, Value *len) {
+        this->name = name;
+        this->inner_type = inner;
+        this->length = len;
+    }
+    llvm::Value *ArrDef::codegen() const {
+        auto type = this->inner_type->get_type();
+        auto var_storage = Builder->CreateAlloca(type, this->length->codegen());
+        LocalScope.back()[this->name] = var_storage;
+        return llvm::PoisonValue::get(type);
     }
 
     llvm::Value *Arrset::codegen() const {
