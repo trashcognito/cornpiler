@@ -214,7 +214,7 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
 
         int i = 0;
         for (auto e : curr_scope->body) {
-          switch (((AST_node *)e)->act) {
+          switch ((dynamic_cast<AST_node *>(e))->act) {
             case act_type::statement:
               if (dynamic_cast<ast_types::statement *>(e)->name.value ==
                   "return") {
@@ -369,12 +369,12 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
       };
 
   auto recursive_translate_global = [&] {
-    std::vector<ast::GlobalEntry *> global_entries;
+    // std::vector<ast::GlobalEntry *> global_entries;
     ast_body *curr_scope =
         dynamic_cast<ast_body *>(goto_ast_scope({scope_element::global}));
     int i = 0;
     for (auto &e : curr_scope->body) {
-      switch (((AST_node *)e)->act) {
+      switch ((dynamic_cast<AST_node *>(e))->act) {
         case act_type::fundef:
           global_entries.push_back((ast::GlobalEntry *)new ast::GlobalFunction(
               new ast::FunctionType(

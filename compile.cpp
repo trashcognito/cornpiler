@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-std::string DEBUG_TOKEN_TYPES[] = {"str",  "identifier", "number", "bracket",
+std::string DEBUG_TOKEN_TYPES[] = {"str",  "identifier", "number", "decimal", "bracket",
                                    "semi", "sep",        "sym"};
 AST::~AST() {}
 
