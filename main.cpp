@@ -225,8 +225,10 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)i);
                   new_scope.push_back(scope_element::args);
+                  ast::ValueArray temporary_body = recursive_translate_body(new_scope);
+                  
                   args.push_back((ast::Value *)new ast::ReturnVal(
-                      recursive_translate_body(new_scope)[0]));
+                      temporary_body[0]));
                 }
               } else if (dynamic_cast<ast_types::statement *>(e)->name.value ==
                          "deref") {

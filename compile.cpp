@@ -257,7 +257,7 @@ std::vector<token> tokenize_program(char *program, int length,
                       std::to_string(status.full_token.length()));
           } else {
             status.full_token = std::to_string(status.full_token[0]);
-            if(status.full_token.find('.') != std::string::npos){
+            if(status.full_token.find('.') == std::string::npos){
               status.push(token_type::number);
             }else{
               status.push(token_type::decimal);
@@ -296,7 +296,7 @@ std::vector<token> tokenize_program(char *program, int length,
           status.full_token += c;
         } else {
           if (status.number) {
-            if(status.full_token.find('.') != std::string::npos){
+            if(status.full_token.find('.') == std::string::npos){
               status.push(token_type::number);
             }else{
               status.push(token_type::decimal);
