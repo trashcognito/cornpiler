@@ -1,3 +1,4 @@
 #pragma once
 #include "ast.hpp"
-std::vector<ast::GlobalEntry *> get_program();
+#include "compile.hpp"
+std::vector<ast::GlobalEntry *> get_program(logger::logger *logger);

@@ -23,7 +23,7 @@ endforeach()
 
 target_link_libraries(cornpiler ${llvm_libs} ${targets})
 
-target_compile_options(cornpiler PUBLIC -fstandalone-debug)
+target_compile_options(cornpiler PUBLIC)
 
 add_subdirectory(tests)
 

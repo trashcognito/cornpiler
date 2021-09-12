@@ -6,11 +6,15 @@
 #include <variant>
 #include <vector>
 
-// #define DEBUG
+class file_object {
+public:
+  char *contents;
+  int length;
+
+  file_object(char *c, int l) : contents(c), length(l) {}
+};
 
 bool check_id_constraints(std::string id, char c);
-
-std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "bracket", "semi", "sep", "sym"};
 
 namespace logger {
 enum class LOG_LEVEL {
@@ -25,52 +29,21 @@ enum class SETTINGS {
   TYPE = 0b0010,
   NONE = 0b0,
 };
-LOG_LEVEL operator|(LOG_LEVEL lhs, LOG_LEVEL rhs){
-  return (LOG_LEVEL)((int)lhs | (int)rhs);
-}
-LOG_LEVEL operator&(LOG_LEVEL lhs, LOG_LEVEL rhs){
-  return (LOG_LEVEL)((int)lhs & (int)rhs);
-}
-SETTINGS operator|(SETTINGS lhs, SETTINGS rhs){
-  return (SETTINGS)((int)lhs | (int)rhs);
-}
-SETTINGS operator&(SETTINGS lhs, SETTINGS rhs){
-  return (SETTINGS)((int)lhs & (int)rhs);
-}
+
+LOG_LEVEL operator|(LOG_LEVEL lhs, LOG_LEVEL rhs);
+LOG_LEVEL operator&(LOG_LEVEL lhs, LOG_LEVEL rhs);
+SETTINGS operator|(SETTINGS lhs, SETTINGS rhs);
+SETTINGS operator&(SETTINGS lhs, SETTINGS rhs);
+
 class logger {
- public:
+public:
   LOG_LEVEL level;
-  std::string log_level_text(LOG_LEVEL lvl) {
-    std::string retval = "";
-    if ((int)lvl & (int)LOG_LEVEL::NONE) {
-      retval += "| NONE ";
-    }
-    if ((int)lvl & (int)LOG_LEVEL::ERROR) {
-      retval += "| ERROR ";
-    }
-    if ((int)lvl & (int)LOG_LEVEL::WARNING) {
-      retval += "| WARNING ";
-    }
-    if ((int)lvl & (int)LOG_LEVEL::INFO) {
-      retval += "| INFO ";
-    }
-    if ((int)lvl & (int)LOG_LEVEL::DEBUG) {
-      retval += "| DEBUG ";
-    }
-    retval.erase(0, 1);
-    return retval;
-  }
-  void log(LOG_LEVEL level, std::string msg, SETTINGS settings = SETTINGS::NEWLINE | SETTINGS::TYPE) {
-    if ((int)(level & logger::level) == 0) return;
-    if((int)(settings & SETTINGS::TYPE) != 0) std::cout << "[" << log_level_text(level) << "] ";
-    std::cout << msg;
-    if((int)(settings & SETTINGS::NEWLINE) != 0) std::cout << std::endl;
-  }
-  logger(LOG_LEVEL l){
-    level = l;
-  }
+  std::string log_level_text(LOG_LEVEL lvl);
+  void log(LOG_LEVEL level, std::string msg,
+           SETTINGS settings = SETTINGS::NEWLINE | SETTINGS::TYPE);
+  logger(LOG_LEVEL log);
 };
-};  // namespace logger
+}; // namespace logger
 
 enum class scope_element : int {
   global = -1,
@@ -85,15 +58,7 @@ enum class scope_element : int {
   out_length = -10,
 };
 
-enum class token_type {
-  string,
-  identifier,
-  number,
-  bracket,
-  semi,
-  sep,
-  sym
-};
+enum class token_type { string, identifier, number, bracket, semi, sep, sym };
 
 enum class act_type {
   error,
@@ -115,25 +80,19 @@ enum class act_type {
   expr,
   arrset,
   arrget,
-  outtype
+  outtype,
+  global,
 };
 
 class entry_bracket {
- public:
+public:
   char first;
   char second;
-  entry_bracket(char f, char s) {
-    first = f;
-    second = s;
-  }
-  entry_bracket() {
-    first = 0;
-    second = 0;
-  }
+  entry_bracket(char f = 0, char s = 0);
 };
 
 class token {
- public:
+public:
   token_type type;
   std::string value;
 
@@ -142,256 +101,209 @@ class token {
 
   int chr;
 
-  token(token_type t, std::string v, int r, int c, int ch) {  // god forgive me for writing a function inside a header file
-    type = t;
-    value = v;
-    row = r;
-    col = c;
-    chr = ch;
-  }
+  token(token_type t, std::string v, int r, int c, int ch);
 };
 
 std::vector<token> tokenize_program(std::string program, int length);
 
 class AST {
- public:
+public:
   virtual ~AST() = 0;
 };
 
 class AST_node {
- public:
+public:
   act_type act;
 };
 
 class ast_body : virtual public AST {
- public:
-  std::vector<AST*> body;
+public:
+  std::vector<AST *> body;
 };
 
 namespace ast_types {
 
-#pragma region
 class string_t : virtual public AST {
- public:
+public:
   std::string value;
-  string_t() {
-    value = "";
-  }
-  string_t(std::string v) {
-    value = v;
-  }
-  string_t(char v) {
-    value = std::string(1, v);
-  }
+  string_t(std::string v = "");
+  string_t(char v);
 };
 class char_t : virtual public AST {
- public:
+public:
   char value;
-  char_t() {
-    value = '\0';
-  };
-  char_t(char v) {
-    value = v;
-  }
+  char_t(char v = '\0');
 };
 class number_t : virtual public AST {
- public:
+public:
   int value;
-  number_t() {
-    value = 0;
-  }
-  number_t(int v) {
-    value = v;
-  }
+  number_t(int v = 0);
 };
-#pragma endregion standard_types_as_ast
 
-#pragma region
 class with_args : virtual public AST {
- public:
+public:
   ast_body args;
 };
 class with_body : virtual public AST {
- public:
+public:
   ast_body body;
 };
 class with_second_body : virtual public AST {
- public:
+public:
   ast_body second_body;
 };
 class with_type : virtual public AST {
- public:
+public:
   ast_body type;
 };
 class with_return_type : virtual public AST {
- public:
+public:
   ast_body return_type;
 };
 
 class arg_with_type_t : public with_type, virtual public AST {
- public:
+public:
   string_t name;
-  arg_with_type_t() {
-    name = string_t("");
-  }
+  arg_with_type_t();
 };
 class with_args_with_type : virtual public AST {
- public:
+public:
   ast_body args;
 };
-#pragma endregion ast_global_types
 
-class global_scope : public with_body {
+class global_scope : public with_body, public AST_node {
+public:
+global_scope();
 };
 
 class statement : public with_args, public AST_node {
- public:
+public:
   string_t name;
-  statement() {
-    act = act_type::statement;
-  }
+  statement();
 };
-class statement_with_body : public with_body, public with_args, public AST_node {
- public:
+class statement_with_body : public with_body,
+                            public with_args,
+                            public AST_node {
+public:
   string_t name;
-  statement_with_body() {
-    act = act_type::statement_with_body;
-  }
+  statement_with_body();
 };
-class statement_with_two_bodies : public with_body, public with_second_body, public with_args, public AST_node {
- public:
+class statement_with_two_bodies : public with_body,
+                                  public with_second_body,
+                                  public with_args,
+                                  public AST_node {
+public:
   string_t name;
-  statement_with_two_bodies() {
-    act = act_type::statement_with_two_bodies;
-  }
+  statement_with_two_bodies();
 };
 
 class varop : virtual public AST, public AST_node {
- public:
+public:
   string_t name;
   string_t var;
-  varop() {
-    act = act_type::varop;
-  }
+  varop();
 };
 
 class vardef : public with_args, public with_type, public AST_node {
- public:
+public:
   string_t name;
-  vardef() {
-    act = act_type::vardef;
-  }
+  vardef();
 };
 
 class in_type : public AST_node, public AST {
- public:
+public:
   string_t type;
-  in_type() {
-    act = act_type::type;
-  }
+  in_type();
 };
 
 class out_type : public with_type, public AST_node {
- public:
+public:
   string_t name;
   ast_body length;
-  out_type() {
-    act = act_type::outtype;
-  }
+  out_type();
 };
 
-class extdef : public with_args_with_type, public with_return_type, public AST_node {
- public:
+class extdef : public with_args_with_type,
+               public with_return_type,
+               public AST_node {
+public:
   string_t name;
-  extdef() {
-    act = act_type::extdef;
-  }
+  extdef();
 };
 
-class fundef : public with_args_with_type, public with_body, public with_return_type, public AST_node {
- public:
+class fundef : public with_args_with_type,
+               public with_body,
+               public with_return_type,
+               public AST_node {
+public:
   string_t name;
-  fundef() {
-    act = act_type::fundef;
-  }
+  fundef();
 };
 
 class glbdef : public with_args, public with_type, public AST_node {
- public:
+public:
   string_t name;
-  glbdef() {
-    act = act_type::glbdef;
-  }
+  glbdef();
 };
 
 class call : public with_args, public AST_node {
- public:
+public:
   string_t name;
-  call() {
-    act = act_type::call;
-  }
+  call();
 };
 
 class varset : public with_args, public AST_node {
- public:
+public:
   string_t name;
-  varset() {
-    act = act_type::varset;
-  }
+  varset();
 };
 
 class getvar : virtual public AST, public AST_node {
- public:
+public:
   string_t name;
-  getvar() {
-    act = act_type::getvar;
-  }
+  getvar();
 };
 
 class const_str : virtual public AST, public AST_node {
- public:
+public:
   string_t value;
-  const_str() {
-    act = act_type::const_str;
-  }
+  const_str();
 };
 
 class const_int : virtual public AST, public AST_node {
- public:
+public:
   number_t value;
-  const_int() {
-    act = act_type::const_int;
-  }
+  const_int();
 };
 
 class oper : public with_args, public AST_node {
- public:
+public:
   string_t op;
-  oper() {
-    act = act_type::oper;
-  }
+  oper();
 };
 
 class expr : public with_args, public AST_node {
- public:
-  expr() {
-    act = act_type::expr;
-  }
+public:
+  expr();
 };
 
 class arrset : public with_args, public AST_node {
- public:
-  arrset() {
-    act = act_type::arrset;
-  }
+public:
+  arrset();
 };
 
 class arrget : virtual public AST, public AST_node {
- public:
+public:
   ast_body index;
   ast_body array;
-  arrget() {
-    act = act_type::arrget;
-  }
+  arrget();
 };
-}  // namespace ast_types
+} // namespace ast_types
+
+file_object read_file(const char *filename, logger::logger *logger);
+bool check_id_constraints(std::string id, char c);
+std::vector<token> tokenize_program(char *program, int length,
+                                    logger::logger *logger);
+ast_types::global_scope lex_program(file_object input_file,
+                                    std::vector<token> program_tokens,
+                                    logger::logger *logger);

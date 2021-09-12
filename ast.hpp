@@ -151,6 +151,12 @@ namespace ast {
         public:
         llvm::Constant *codegen() const = 0;
     };
+    class ValueConst : public Value {
+        public:
+        Value *value;
+        llvm::Constant *codegen() const;
+        ValueConst(Value* val);
+    };
     class IntegerConst : public Const {
         public:
         intmax_t from;
@@ -240,7 +246,8 @@ namespace ast {
         public:
         Value *arg;
         enum UOps {
-            NOT
+            NOT,
+            NEG
         };
         UOps op;
         llvm::Value *codegen() const;
