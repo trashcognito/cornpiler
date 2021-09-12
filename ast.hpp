@@ -141,6 +141,14 @@ namespace ast {
         FunctionType(std::string name, std::vector<Type *> args, Type *return_type, bool varargs=false);
         llvm::Type *get_type() const;
     };
+    class ArrDef : public Value {
+        public:
+        Type *inner_type;
+        Value *length;
+        std::string name;
+        ArrDef(std::string name, Type *inner, Value *len);
+        llvm::Value *codegen() const;
+    };
     //float
     //integer
     //array
@@ -274,6 +282,12 @@ namespace ast {
         Value *index;
         llvm::Value *codegen() const;
         Arrgetptr(Value *array, Value *indexes);
+    };
+    class Expr : public Value {
+        public:
+        Value *actual;
+        llvm::Value *codegen() const;
+        Expr(Value *inner);
     };
 
     class GlobalEntry {
