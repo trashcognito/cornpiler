@@ -255,7 +255,11 @@ std::vector<token> tokenize_program(char *program, int length,
                       std::to_string(status.full_token.length()));
           } else {
             status.full_token = std::to_string(status.full_token[0]);
-            status.push(token_type::number);
+            if(status.full_token.find('.') != std::string::npos){
+              status.push(token_type::number);
+            }else{
+              status.push(token_type::decimal);
+            }
             status.reset();
           }
         } else if (c == '\\') {
@@ -290,7 +294,11 @@ std::vector<token> tokenize_program(char *program, int length,
           status.full_token += c;
         } else {
           if (status.number) {
-            status.push(token_type::number);
+            if(status.full_token.find('.') != std::string::npos){
+              status.push(token_type::number);
+            }else{
+              status.push(token_type::decimal);
+            }
             status.reset();
           }
           if (c == '"') {
@@ -832,6 +840,13 @@ ast_types::global_scope lex_program(file_object input_file,
             // number const
             ast_types::const_int *to_append = new ast_types::const_int;
             to_append->value = stoi(program_tokens[itt].value);
+            append_ast_scope(scope, to_append);
+            break;
+          }
+          case token_type::decimal: {
+            // decimal const
+            ast_types::const_decimal *to_append = new ast_types::const_decimal;
+            to_append->value = stod(program_tokens[itt].value);
             append_ast_scope(scope, to_append);
             break;
           }

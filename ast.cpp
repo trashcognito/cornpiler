@@ -279,6 +279,7 @@ namespace ast {
     }
 
     //TODO: split off Const to different types to offload the work to the lexer?
+    // i dont want this, this hurts my brain ^^
     ValueConst::ValueConst(Value *val) {
         this->value = val;
     }

@@ -58,7 +58,7 @@ enum class scope_element : int {
   out_length = -10,
 };
 
-enum class token_type { string, identifier, number, bracket, semi, sep, sym };
+enum class token_type { string, identifier, number, decimal, bracket, semi, sep, sym };
 
 enum class act_type {
   error,
@@ -76,6 +76,7 @@ enum class act_type {
   getvar,
   const_str,
   const_int,
+  const_decimal,
   oper,
   expr,
   arrset,
@@ -138,6 +139,11 @@ class number_t : virtual public AST {
 public:
   int value;
   number_t(int v = 0);
+};
+class decimal_t: virtual public AST {
+public:
+  float value;
+  decimal_t(float v = 0.0);
 };
 
 class with_args : virtual public AST {
@@ -274,6 +280,12 @@ class const_int : virtual public AST, public AST_node {
 public:
   number_t value;
   const_int();
+};
+
+class const_decimal : virtual public AST, public AST_node {
+public:
+  decimal_t value;
+  const_decimal();
 };
 
 class oper : public with_args, public AST_node {
