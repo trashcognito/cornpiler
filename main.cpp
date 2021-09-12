@@ -316,9 +316,9 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
             case act_type::varset:
               args.push_back((ast::Value *)new ast::Varset(
                   dynamic_cast<ast_types::varset *>(e)->name.value,
-                  (ast::Const *)new ast::ValueConst(recursive_translate_body(
+                  recursive_translate_body(
                       {scope_element::global, (scope_element)i,
-                       scope_element::args})[0])));
+                       scope_element::args})[0]));
               break;
             case act_type::getvar:
               args.push_back((ast::Value *)new ast::GetVar(
@@ -414,9 +414,10 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
         case act_type::glbdef:
           global_entries.push_back((ast::GlobalEntry *)new ast::GlobalVariable(
               dynamic_cast<ast_types::glbdef *>(e)->name.value,
-              (ast::Const *)new ast::ValueConst(recursive_translate_body(
+              recursive_translate_body(
                   {scope_element::global, (scope_element)i,
-                   scope_element::args})[0]),
+                   scope_element::args})[0]
+                  ->to_const(),
               false));
           break;
       }
