@@ -141,7 +141,7 @@ std::vector<ast::GlobalEntry *> get_program(logger::logger *logger) {
 
   // dont
 
-  file_object input_file = read_file("../tests/helloworld.crn", logger);
+  file_object input_file = read_file("../tests/stuff.crn", logger);
   std::vector<token> program_tokens =
       tokenize_program(input_file.contents, input_file.length, logger);
   ast_types::global_scope lexed_program =
