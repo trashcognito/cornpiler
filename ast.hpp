@@ -312,6 +312,21 @@ namespace ast {
         Const* to_const();
         Expr(Value *inner);
     };
+    class Bitcast : public Value {
+        public:
+        Value *thing;
+        Type *type;
+        llvm::Value *codegen() const;
+        Const *to_const();
+        Bitcast(Value *thing, Type *type);
+    };
+    class ConstBitcast : public Const {
+        public:
+        Const *thing;
+        Type *type;
+        llvm::Constant *codegen() const;
+        ConstBitcast(Const *thing, Type *type);
+    };
 
     class GlobalEntry {
         public:
