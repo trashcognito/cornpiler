@@ -199,12 +199,6 @@ namespace ast {
         llvm::Constant *codegen() const;
         ConstUnaryOp(UOps operand, Const *arg);
     };
-    class ValueConst : public Value {
-        public:
-        Value *value;
-        llvm::Constant *codegen() const;
-        ValueConst(Value* val);
-    };
     class IntegerConst : public Const {
         public:
         intmax_t from;

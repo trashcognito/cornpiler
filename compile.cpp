@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-std::string DEBUG_TOKEN_TYPES[] = {"str",  "identifier", "number", "bracket",
+std::string DEBUG_TOKEN_TYPES[] = {"str",  "identifier", "number", "decimal", "bracket",
                                    "semi", "sep",        "sym"};
 AST::~AST() {}
 
@@ -68,6 +68,7 @@ ast_types::string_t::string_t(std::string v) { value = v; }
 ast_types::string_t::string_t(char v) { value = std::string(1, v); }
 ast_types::char_t::char_t(char v) { value = v; }
 ast_types::number_t::number_t(int v) { value = v; }
+ast_types::decimal_t::decimal_t(float v) { value = v; }
 ast_types::arg_with_type_t::arg_with_type_t() { name = string_t(""); }
 ast_types::global_scope::global_scope() { act = act_type::global; }
 ast_types::statement::statement() { act = act_type::statement; }
@@ -89,6 +90,7 @@ ast_types::varset::varset() { act = act_type::varset; }
 ast_types::getvar::getvar() { act = act_type::getvar; }
 ast_types::const_str::const_str() { act = act_type::const_str; }
 ast_types::const_int::const_int() { act = act_type::const_int; }
+ast_types::const_decimal::const_decimal() { act = act_type::const_decimal; }
 ast_types::oper::oper() { act = act_type::oper; }
 ast_types::expr::expr() { act = act_type::expr; }
 ast_types::arrset::arrset() { act = act_type::arrset; }
@@ -255,7 +257,7 @@ std::vector<token> tokenize_program(char *program, int length,
                       std::to_string(status.full_token.length()));
           } else {
             status.full_token = std::to_string(status.full_token[0]);
-            if(status.full_token.find('.') != std::string::npos){
+            if(status.full_token.find('.') == std::string::npos){
               status.push(token_type::number);
             }else{
               status.push(token_type::decimal);
@@ -294,7 +296,7 @@ std::vector<token> tokenize_program(char *program, int length,
           status.full_token += c;
         } else {
           if (status.number) {
-            if(status.full_token.find('.') != std::string::npos){
+            if(status.full_token.find('.') == std::string::npos){
               status.push(token_type::number);
             }else{
               status.push(token_type::decimal);

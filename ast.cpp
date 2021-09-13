@@ -277,12 +277,6 @@ namespace ast {
         }
         return llvm::FunctionType::get(this->return_type->get_type(), arg_types, this->varargs);
     }
-
-    //TODO: split off Const to different types to offload the work to the lexer?
-    // i dont want this, this hurts my brain ^^
-    ValueConst::ValueConst(Value *val) {
-        this->value = val;
-    }
     
     FloatConst::FloatConst(float f) {
         this->from = f;
