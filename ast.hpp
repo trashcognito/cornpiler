@@ -54,7 +54,8 @@ namespace ast {
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
-        virtual Const* to_const();
+        //TODO: maybe make this pure virtual as well?
+        virtual const Const* to_const() const;
     };
 
     using ValueArray=std::vector<Value *>;
@@ -187,17 +188,17 @@ namespace ast {
     class ConstOperand : public Const {
         public:
         OperandType op;
-        Const *arg1;
-        Const *arg2;
+        const Const *arg1;
+        const Const *arg2;
         llvm::Constant *codegen() const;
-        ConstOperand(Const *lhs, Const *rhs, OperandType op);
+        ConstOperand(const Const *lhs, const Const *rhs, OperandType op);
     };
     class ConstUnaryOp : public Const {
         public:
-        Const *arg;
+        const Const *arg;
         UOps op;
         llvm::Constant *codegen() const;
-        ConstUnaryOp(UOps operand, Const *arg);
+        ConstUnaryOp(UOps operand, const Const *arg);
     };
     class IntegerConst : public Const {
         public:
@@ -235,7 +236,7 @@ namespace ast {
         Value *arg1;
         Value *arg2;
         llvm::Value *codegen() const;
-        Const* to_const();
+        const Const* to_const() const;
         Operand(Value *lhs, Value *rhs, OperandType op);
     };
 
@@ -274,7 +275,7 @@ namespace ast {
         
         UOps op;
         llvm::Value *codegen() const;
-        Const* to_const();
+        const Const* to_const() const;
         UnaryOp(UOps operand, Value *arg);
     };
     class Arrget : public Value {
@@ -303,8 +304,23 @@ namespace ast {
         public:
         Value *actual;
         llvm::Value *codegen() const;
-        Const* to_const();
+        const Const* to_const() const;
         Expr(Value *inner);
+    };
+    class Bitcast : public Value {
+        public:
+        Value *thing;
+        Type *type;
+        llvm::Value *codegen() const;
+        const Const* to_const() const;
+        Bitcast(Value *thing, Type *type);
+    };
+    class ConstBitcast : public Const {
+        public:
+        const Const *thing;
+        Type *type;
+        llvm::Constant *codegen() const;
+        ConstBitcast(const Const *thing, Type *type);
     };
 
     class GlobalEntry {
@@ -334,8 +350,8 @@ namespace ast {
     class GlobalVariable : public GlobalEntry {
         public:
         bool constant;
-        Const *value;
-        GlobalVariable(std::string name, Const *value, bool is_const=true);
+        const Const *value;
+        GlobalVariable(std::string name, const Const *value, bool is_const=true);
         void codegen() const;
     };
 }

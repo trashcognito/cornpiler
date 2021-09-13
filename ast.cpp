@@ -19,8 +19,8 @@
 
 static std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
-    Const* Value::to_const() {
-        return dynamic_cast<Const *>(this);
+    const Const* Value::to_const() const {
+        return dynamic_cast<const Const *>(this);
     }
     llvm::Value *Vardef::codegen() const {
         auto type = ty->get_type();
@@ -328,7 +328,7 @@ namespace ast {
         this->arg2 = rhs;
         this->op = op;
     }
-    Const *Operand::to_const() {
+    const Const *Operand::to_const() const {
         auto const1 = arg1->to_const();
         if (!const1) return nullptr;
 
@@ -535,7 +535,7 @@ namespace ast {
         }
     }
 
-    Const *UnaryOp::to_const() {
+    const Const *UnaryOp::to_const() const {
         auto const1 = arg->to_const();
         if (!const1) return nullptr;
         return new ConstUnaryOp(this->op, const1);
@@ -550,8 +550,28 @@ namespace ast {
     llvm::Value *Expr::codegen() const {
         return this->actual->codegen();
     }
-    Const *Expr::to_const() {
+    const Const *Expr::to_const() const {
         return this->actual->to_const();
+    }
+    Bitcast::Bitcast(Value *thing, Type *type) {
+        this->thing = thing;
+        this->type = type;
+    }
+    llvm::Value *Bitcast::codegen() const {
+        //TODO: maybe use another bitcast instruction type?
+        return Builder->CreatePointerBitCastOrAddrSpaceCast(this->thing->codegen(), this->type->get_type());
+    }
+    const Const *Bitcast::to_const() const {
+        auto const1 = this->thing->to_const();
+        if (!const1) return nullptr;
+        return new ConstBitcast(const1, this->type);
+    }
+    ConstBitcast::ConstBitcast(const Const *thing, Type *type) {
+        this->thing = thing;
+        this->type = type;
+    }
+    llvm::Constant *ConstBitcast::codegen() const {
+        return llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(this->thing->codegen(), this->type->get_type());
     }
     llvm::Value *Arrgetptr::codegen() const {
         auto arrval = this->array->codegen();
@@ -655,7 +675,7 @@ namespace ast {
         }
         LocalScope.pop_back();
     }
-    GlobalVariable::GlobalVariable(std::string name_a, Const *value, bool is_const) {
+    GlobalVariable::GlobalVariable(std::string name_a, const Const *value, bool is_const) {
         this->name = name_a;
         this->value = value;
         this->constant = is_const;
@@ -664,7 +684,7 @@ namespace ast {
         auto val = this->value->codegen();
         auto the_var = new llvm::GlobalVariable(*TheModule, val->getType(), this->constant, llvm::GlobalObject::ExternalLinkage, val, this->name);
     }
-    ConstUnaryOp::ConstUnaryOp(UOps operand, Const *arg) {
+    ConstUnaryOp::ConstUnaryOp(UOps operand, const Const *arg) {
         this->op = operand;
         this->arg = arg;
     }
@@ -677,7 +697,7 @@ namespace ast {
                 return llvm::ConstantExpr::getNeg(arg1);
         }
     }
-    ConstOperand::ConstOperand(Const *lhs, Const *rhs, OperandType op) {
+    ConstOperand::ConstOperand(const Const *lhs, const Const *rhs, OperandType op) {
         this->arg1 = lhs;
         this->arg2 = rhs;
         this->op = op;
