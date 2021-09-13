@@ -4,7 +4,7 @@ include(CTest)
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 find_package(LLVM 12 REQUIRED CONFIG)
-find_program(LLVM_CONFIG NAMES llvm-config-12)
+
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
@@ -13,7 +13,7 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_executable(cornpiler main.cpp ast.cpp compiler_frontend.cpp compile.cpp)
-execute_process(COMMAND ${LLVM_CONFIG} --system-libs --link-shared --libs all
+execute_process(COMMAND llvm-config-12 --system-libs --link-shared --libs all
                 OUTPUT_VARIABLE llvm_libs
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
