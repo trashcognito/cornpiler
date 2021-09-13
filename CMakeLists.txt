@@ -13,11 +13,9 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 add_executable(cornpiler main.cpp ast.cpp compiler_frontend.cpp compile.cpp)
-llvm_map_components_to_libnames(llvm_libs support core irreader)
-
-foreach(target ${LLVM_TARGETS_TO_BUILD})
-  list(APPEND targets "LLVM${target}CodeGen")
-endforeach()
+execute_process(COMMAND llvm-config-12 --system-libs --link-shared --libs all
+                OUTPUT_VARIABLE llvm_libs
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # Link against LLVM libraries
 

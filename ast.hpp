@@ -323,6 +323,20 @@ namespace ast {
         ConstBitcast(const Const *thing, Type *type);
     };
 
+    class InlineAsm : public Value {
+        public:
+        llvm::Value *codegen() const;
+        std::vector<Value *> args;
+        //TODO: merge inside AST?
+        std::string constraints;
+        //TODO: get asm string?
+        std::string asmstring;
+        bool is_volatile;
+        bool is_align_stack;
+        //TODO: The constructor is probably gonna need to be changed
+        InlineAsm(std::string assembly, std::string constraints, std::vector<Value *> args, bool is_volatile, bool is_align_stack);
+    };
+
     class GlobalEntry {
         public:
         virtual void codegen() const = 0;
