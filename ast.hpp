@@ -54,6 +54,7 @@ namespace ast {
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
+        //TODO: maybe make this pure virtual as well?
         virtual const Const* to_const() const;
     };
 
