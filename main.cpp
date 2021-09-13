@@ -226,7 +226,7 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   new_scope.push_back((scope_element)i);
                   new_scope.push_back(scope_element::args);
                   ast::ValueArray temporary_body = recursive_translate_body(new_scope);
-                  
+
                   args.push_back((ast::Value *)new ast::ReturnVal(
                       temporary_body[0]));
                 }
@@ -304,6 +304,15 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               args.push_back((ast::Value *)new ast::Vardef(
                   dynamic_cast<ast_types::vardef *>(e)->name.value,
                   translate_data_types(new_scope)));
+
+              new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::args);
+              if (dynamic_cast<ast_body *>(goto_ast_scope(new_scope))->body.size() > 0) {
+                args.push_back((ast::Value *)new ast::Varset(
+                    dynamic_cast<ast_types::vardef *>(e)->name.value,
+                    recursive_translate_body(new_scope)[0]));
+              }
               break;
             }
             case act_type::call:
@@ -315,13 +324,15 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                     return recursive_translate_body(new_scope);
                   }()));
               break;
-            case act_type::varset:
+            case act_type::varset:{
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::args);
+
               args.push_back((ast::Value *)new ast::Varset(
                   dynamic_cast<ast_types::varset *>(e)->name.value,
-                  recursive_translate_body(
-                      {scope_element::global, (scope_element)i,
-                       scope_element::args})[0]));
-              break;
+                  recursive_translate_body(new_scope)[0]));
+              break;}
             case act_type::getvar:
               args.push_back((ast::Value *)new ast::GetVar(
                   dynamic_cast<ast_types::getvar *>(e)->name.value));

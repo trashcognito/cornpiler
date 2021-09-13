@@ -642,13 +642,21 @@ ast_types::global_scope lex_program(file_object input_file,
                 // vardef
                 ast_types::vardef *to_append = new ast_types::vardef;
                 std::vector<scope_element> new_scope = scope;
+                int appended_index = append_ast_scope(scope, to_append);
                 new_scope.push_back(
-                    (scope_element)append_ast_scope(scope, to_append));
+                    (scope_element)appended_index);
                 new_scope.push_back(scope_element::type);
-                itt = recursive_lex(itt, new_scope, 3,
+                itt = recursive_lex(itt, new_scope, 4,
                                     entry_bracket('(', ')'));  // var type lexing
                 to_append->name = ast_types::string_t(look_ahead().value);
-                append_ast_scope(scope, to_append);
+                if (look_ahead().value == "=") {
+                  new_scope = scope;
+                  new_scope.push_back((scope_element)appended_index);
+                  new_scope.push_back(scope_element::args);
+                  itt = recursive_lex(itt, new_scope, 2, entry_bracket('(', ')'));
+                } else {
+                  --itt;
+                }
               } else if (initial_token.value ==
                          "glvar") {  // TODO: autodetect glvar and deprecate it
                 // gldef

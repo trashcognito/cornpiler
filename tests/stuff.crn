@@ -1,5 +1,5 @@
 fun main => int64 {
-  if(3 > 2){
-    return(4)
-  }
+  var int64 i = 1
+  var int64 j = 2
+  return(i + j)
 }
