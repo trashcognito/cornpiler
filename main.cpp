@@ -464,7 +464,7 @@ int main(int argc, char *argv[]) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
-  // llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmParsers();
   llvm::InitializeAllAsmPrinters();
 
   std::string Error;
