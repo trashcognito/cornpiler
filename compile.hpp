@@ -8,10 +8,10 @@
 
 class file_object {
 public:
-  char *contents;
+  std::string contents;
   int length;
 
-  file_object(char *c, int l) : contents(c), length(l) {}
+  file_object(std::string c, int l) : contents(c), length(l) {};
 };
 
 bool check_id_constraints(std::string id, char c);
@@ -314,7 +314,7 @@ public:
 
 file_object read_file(const char *filename, logger::logger *logger);
 bool check_id_constraints(std::string id, char c);
-std::vector<token> tokenize_program(char *program, int length,
+std::vector<token> tokenize_program(std::string program, int length,
                                     logger::logger *logger);
 ast_types::global_scope lex_program(file_object input_file,
                                     std::vector<token> program_tokens,

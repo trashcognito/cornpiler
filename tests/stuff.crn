@@ -1,3 +1,5 @@
 fun main => int64 {
-  return(5)
+  if(3 > 2){
+    return(4)
+  }
 }
