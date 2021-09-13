@@ -837,7 +837,7 @@ ast_types::global_scope lex_program(file_object input_file,
                       ast_types::getvar *to_append2 = new ast_types::getvar;
                       to_append2->name = var_name.value;
                       append_ast_scope(new_scope, to_append2);
-                      itt = recursive_lex(itt, new_scope, 1,
+                      itt = recursive_lex(itt, new_scope, 2,
                                           entry_bracket('(', ')'));  // args lexing
                     }
                   } else {
