@@ -1,5 +1,5 @@
 fun main => int64 {
-  var int64 i = 1
-  var int64 j = 2
-  return(i + j)
+  var int64 ahmet = 3
+  ahmet = 4
+  return(ahmet)
 }

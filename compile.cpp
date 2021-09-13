@@ -819,7 +819,7 @@ ast_types::global_scope lex_program(file_object input_file,
                       new_scope.push_back(
                           (scope_element)append_ast_scope(scope, to_append));
                       new_scope.push_back(scope_element::args);
-                      itt = recursive_lex(itt, new_scope, 1,
+                      itt = recursive_lex(itt, new_scope, 2,
                                           entry_bracket('(', ')'));  // args lexing
                     } else {
                       // +=, -=, *=, /=, %=, &=, ^=, |=
