@@ -96,6 +96,109 @@ ast_types::expr::expr() { act = act_type::expr; }
 ast_types::arrset::arrset() { act = act_type::arrset; }
 ast_types::arrget::arrget() { act = act_type::arrget; }
 
+std::string AST::print_node() { return ""; }
+std::string AST_node::print_node() { return ""; }
+std::string ast_body::print_node() {
+  std::string retval = "[";
+  for (auto &i : this->body) {
+    retval += ",{" + i->print_node() + "}";
+  }
+  if (retval.size() > 1) {
+    retval.erase(1, 1);
+  }
+
+  retval += "]";
+  return retval;
+}
+
+std::string ast_types::string_t::print_node() { return "\"" + value + "\""; }
+std::string ast_types::char_t::print_node() { return "'" + std::string(1, value) + "'"; }
+std::string ast_types::number_t::print_node() { return std::to_string(value); }
+std::string ast_types::decimal_t::print_node() { return std::to_string(value); }
+
+std::string ast_types::global_scope::print_node() {
+  return "{\"globals\":" + this->body.print_node() + "}";
+}
+std::string ast_types::statement::print_node() { return "\"statement\": { \"name\":" +
+                                                        this->name.print_node() +
+                                                        ",\"args\": " + this->args.print_node() + "}"; }
+std::string ast_types::statement_with_body::print_node() {
+  return "\"statement_with_body\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() +
+         ",\"body\": " + this->body.print_node() + "}";
+}
+std::string ast_types::statement_with_two_bodies::print_node() {
+  return "\"statement_with_two_bodies\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() +
+         ",\"body1\": " + this->body.print_node() +
+         ",\"body2\": " + this->second_body.print_node() + "}";
+}
+std::string ast_types::varop::print_node() {
+  return "\"varop\": {\"name\":" + this->name.print_node() +
+         ",var: " + this->var.print_node() + "}";
+}
+std::string ast_types::vardef::print_node() {
+  return "\"vardef\": {\"name\":" + this->name.print_node() +
+         ",\"type\": " + this->type.print_node() +
+         ",\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::in_type::print_node() {
+  return "\"in_type\": {\"type\":" + this->type.print_node() + "}";
+}
+std::string ast_types::out_type::print_node() {
+  return "\"out_type\": {\"type\":" + this->name.print_node() + ",\"inner_type\":" + this->type.print_node() + ",\"length\":" + this->length.print_node() + "}";
+}
+std::string ast_types::extdef::print_node() {
+  return "\"extdef\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() +
+         ",\"return_type\": " + this->return_type.print_node() + "}";
+}
+std::string ast_types::fundef::print_node() {
+  return "\"fundef\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() +
+         ",\"return_type\": " + this->return_type.print_node() +
+         ",\"body\": " + this->body.print_node() + "}";
+}
+std::string ast_types::glbdef::print_node() {
+  return "\"vardef\": {\"name\":" + this->name.print_node() +
+         ",\"type\": " + this->type.print_node() +
+         ",\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::call::print_node() {
+  return "\"call\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::varset::print_node() {
+  return "\"varset\": {\"name\":" + this->name.print_node() +
+         ",\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::getvar::print_node() {
+  return "\"getvar\": {\"name\":" + this->name.print_node() + "}";
+}
+std::string ast_types::const_str::print_node() {
+  return "\"const_str\": {\"value\":" + this->value.print_node() + "}";
+}
+std::string ast_types::const_int::print_node() {
+  return "\"const_int\": {\"value\":" + this->value.print_node() + "}";
+}
+std::string ast_types::const_decimal::print_node() {
+  return "\"const_decimal\": {\"value\":" + this->value.print_node() + "}";
+}
+std::string ast_types::oper::print_node() {
+  return "\"oper\": {\"op\":" + this->op.print_node() +
+         ",\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::expr::print_node() {
+  return "\"expr\": {\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::arrset::print_node() {
+  return "\"arrset\": {\"args\": " + this->args.print_node() + "}";
+}
+std::string ast_types::arrget::print_node() {
+  return "\"arrget\": {\"index\":" + this->index.print_node() +
+         ",\"arr\": " + this->array.print_node() + "}";
+}
+
 file_object read_file(const char *filename, logger::logger *logger) {
   std::ifstream is(filename);
   if (!is) {
@@ -603,7 +706,7 @@ ast_types::global_scope lex_program(file_object input_file,
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::args);
 
-                while (program_tokens[itt].value != "(") {
+                while (program_tokens[itt].value != ")") {
                   itt = recursive_lex(itt, new_scope, 1,
                                       entry_bracket('(', ')'));  // args lexing
                 }
@@ -807,7 +910,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   // since we have already incremented itt, we can check whether
                   // it is a assignment or a reference right away
                   if (program_tokens[itt].value == "=" ||
-                      program_tokens[itt].value[1] == '=') {
+                      (program_tokens[itt].value[1] == '=' && program_tokens[itt].value[0] != '=' && program_tokens[itt].value[0] != '!' && program_tokens[itt].value[0] != '<' && program_tokens[itt].value[0] != '>')) {
                     // assignment
                     token operation = program_tokens[itt];
                     token var_name = program_tokens[itt - 1];
@@ -881,8 +984,9 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, to_append));
                   new_scope.push_back(scope_element::args);
-                  itt = recursive_lex(itt, new_scope, 1,
-                                      entry_bracket('(', ')'));  // args lexing
+                  int tmp_itt = recursive_lex(itt, new_scope, 1,
+                                              entry_bracket('(', ')'));  // args lexing
+                  itt = tmp_itt;
                   continue;
                 }
               } else if (initial_token.value == "[") {

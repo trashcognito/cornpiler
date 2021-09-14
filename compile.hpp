@@ -7,11 +7,11 @@
 #include <vector>
 
 class file_object {
-public:
+ public:
   std::string contents;
   int length;
 
-  file_object(std::string c, int l) : contents(c), length(l) {};
+  file_object(std::string c, int l) : contents(c), length(l){};
 };
 
 bool check_id_constraints(std::string id, char c);
@@ -36,14 +36,14 @@ SETTINGS operator|(SETTINGS lhs, SETTINGS rhs);
 SETTINGS operator&(SETTINGS lhs, SETTINGS rhs);
 
 class logger {
-public:
+ public:
   LOG_LEVEL level;
   std::string log_level_text(LOG_LEVEL lvl);
   void log(LOG_LEVEL level, std::string msg,
            SETTINGS settings = SETTINGS::NEWLINE | SETTINGS::TYPE);
   logger(LOG_LEVEL log);
 };
-}; // namespace logger
+};  // namespace logger
 
 enum class scope_element : int {
   global = -1,
@@ -58,7 +58,14 @@ enum class scope_element : int {
   out_length = -10,
 };
 
-enum class token_type { string, identifier, number, decimal, bracket, semi, sep, sym };
+enum class token_type { string,
+                        identifier,
+                        number,
+                        decimal,
+                        bracket,
+                        semi,
+                        sep,
+                        sym };
 
 enum class act_type {
   error,
@@ -86,14 +93,14 @@ enum class act_type {
 };
 
 class entry_bracket {
-public:
+ public:
   char first;
   char second;
   entry_bracket(char f = 0, char s = 0);
 };
 
 class token {
-public:
+ public:
   token_type type;
   std::string value;
 
@@ -108,209 +115,237 @@ public:
 std::vector<token> tokenize_program(std::string program, int length);
 
 class AST {
-public:
+ public:
   virtual ~AST() = 0;
+  virtual std::string print_node();
 };
 
 class AST_node {
-public:
+ public:
   act_type act;
+  std::string print_node();
 };
 
 class ast_body : virtual public AST {
-public:
+ public:
   std::vector<AST *> body;
+  std::string print_node() override;
 };
 
 namespace ast_types {
 
 class string_t : virtual public AST {
-public:
+ public:
   std::string value;
   string_t(std::string v = "");
   string_t(char v);
+  std::string print_node() override;
 };
 class char_t : virtual public AST {
-public:
+ public:
   char value;
   char_t(char v = '\0');
+  std::string print_node() override;
 };
 class number_t : virtual public AST {
-public:
+ public:
   int value;
   number_t(int v = 0);
+  std::string print_node() override;
 };
-class decimal_t: virtual public AST {
-public:
+class decimal_t : virtual public AST {
+ public:
   float value;
   decimal_t(float v = 0.0);
+  std::string print_node() override;
 };
 
 class with_args : virtual public AST {
-public:
+ public:
   ast_body args;
 };
 class with_body : virtual public AST {
-public:
+ public:
   ast_body body;
 };
 class with_second_body : virtual public AST {
-public:
+ public:
   ast_body second_body;
 };
 class with_type : virtual public AST {
-public:
+ public:
   ast_body type;
 };
 class with_return_type : virtual public AST {
-public:
+ public:
   ast_body return_type;
 };
 
 class arg_with_type_t : public with_type, virtual public AST {
-public:
+ public:
   string_t name;
   arg_with_type_t();
 };
 class with_args_with_type : virtual public AST {
-public:
+ public:
   ast_body args;
 };
 
 class global_scope : public with_body, public AST_node {
-public:
-global_scope();
+ public:
+  global_scope();
+  std::string print_node() override;
 };
 
 class statement : public with_args, public AST_node {
-public:
+ public:
   string_t name;
   statement();
+  std::string print_node() override;
 };
 class statement_with_body : public with_body,
                             public with_args,
                             public AST_node {
-public:
+ public:
   string_t name;
   statement_with_body();
+  std::string print_node() override;
 };
 class statement_with_two_bodies : public with_body,
                                   public with_second_body,
                                   public with_args,
                                   public AST_node {
-public:
+ public:
   string_t name;
   statement_with_two_bodies();
+  std::string print_node() override;
 };
 
 class varop : virtual public AST, public AST_node {
-public:
+ public:
   string_t name;
   string_t var;
   varop();
+  std::string print_node() override;
 };
 
 class vardef : public with_args, public with_type, public AST_node {
-public:
+ public:
   string_t name;
   vardef();
+  std::string print_node() override;
 };
 
 class in_type : public AST_node, public AST {
-public:
+ public:
   string_t type;
   in_type();
+  std::string print_node() override;
 };
 
 class out_type : public with_type, public AST_node {
-public:
+ public:
   string_t name;
   ast_body length;
   out_type();
+  std::string print_node() override;
 };
 
 class extdef : public with_args_with_type,
                public with_return_type,
                public AST_node {
-public:
+ public:
   string_t name;
   extdef();
+  std::string print_node() override;
 };
 
 class fundef : public with_args_with_type,
                public with_body,
                public with_return_type,
                public AST_node {
-public:
+ public:
   string_t name;
   fundef();
+  std::string print_node() override;
 };
 
 class glbdef : public with_args, public with_type, public AST_node {
-public:
+ public:
   string_t name;
   glbdef();
+  std::string print_node() override;
 };
 
 class call : public with_args, public AST_node {
-public:
+ public:
   string_t name;
   call();
+  std::string print_node() override;
 };
 
 class varset : public with_args, public AST_node {
-public:
+ public:
   string_t name;
   varset();
+  std::string print_node() override;
 };
 
 class getvar : virtual public AST, public AST_node {
-public:
+ public:
   string_t name;
   getvar();
+  std::string print_node() override;
 };
 
 class const_str : virtual public AST, public AST_node {
-public:
+ public:
   string_t value;
   const_str();
+  std::string print_node() override;
 };
 
 class const_int : virtual public AST, public AST_node {
-public:
+ public:
   number_t value;
   const_int();
+  std::string print_node() override;
 };
 
 class const_decimal : virtual public AST, public AST_node {
-public:
+ public:
   decimal_t value;
   const_decimal();
+  std::string print_node() override;
 };
 
 class oper : public with_args, public AST_node {
-public:
+ public:
   string_t op;
   oper();
+  std::string print_node() override;
 };
 
 class expr : public with_args, public AST_node {
-public:
+ public:
   expr();
+  std::string print_node() override;
 };
 
 class arrset : public with_args, public AST_node {
-public:
+ public:
   arrset();
+  std::string print_node() override;
 };
 
 class arrget : virtual public AST, public AST_node {
-public:
+ public:
   ast_body index;
   ast_body array;
   arrget();
+  std::string print_node() override;
 };
-} // namespace ast_types
+}  // namespace ast_types
 
 file_object read_file(const char *filename, logger::logger *logger);
 bool check_id_constraints(std::string id, char c);

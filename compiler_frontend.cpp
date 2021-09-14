@@ -10,5 +10,6 @@ std::vector<ast::GlobalEntry *> get_program(logger::logger *logger) {
   ast_types::global_scope lexed_program =
       lex_program(input_file, program_tokens, logger);
 
+  std::cout << lexed_program.print_node() << std::endl;
   return translate_program(lexed_program, logger);
 }
