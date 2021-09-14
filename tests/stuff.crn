@@ -1,5 +1,23 @@
 fun main => int64 {
-  var int64 i = 1
-  var int64 j = 2
-  return(i + j)
+  var int64 i = 3
+  if(i >= 3) {
+    i = 4
+  } else {
+    i = 5
+  }
+
+
+  if(i > 2){
+    if(i > 4){
+      return(1)
+    }
+    if(i > 3){
+      return(2)
+    }else{
+      return(3)
+    }
+  }else{
+    return(4)
+  }
+  return(0)
 }
