@@ -140,7 +140,7 @@ std::string ast_types::varop::print_node() {
 std::string ast_types::vardef::print_node() {
   return "\"vardef\": {\"name\":" + this->name.print_node() +
          ",\"type\": " + this->type.print_node() +
-         ",\"args\": " + this->type.print_node() + "}";
+         ",\"args\": " + this->args.print_node() + "}";
 }
 std::string ast_types::in_type::print_node() {
   return "\"in_type\": {\"type\":" + this->type.print_node() + "}";
@@ -162,7 +162,7 @@ std::string ast_types::fundef::print_node() {
 std::string ast_types::glbdef::print_node() {
   return "\"vardef\": {\"name\":" + this->name.print_node() +
          ",\"type\": " + this->type.print_node() +
-         ",\"args\": " + this->type.print_node() + "}";
+         ",\"args\": " + this->args.print_node() + "}";
 }
 std::string ast_types::call::print_node() {
   return "\"call\": {\"name\":" + this->name.print_node() +
