@@ -910,7 +910,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   // since we have already incremented itt, we can check whether
                   // it is a assignment or a reference right away
                   if (program_tokens[itt].value == "=" ||
-                      program_tokens[itt].value[1] == '=') {
+                      (program_tokens[itt].value[1] == '=' && program_tokens[itt].value[0] != '=' && program_tokens[itt].value[0] != '!' && program_tokens[itt].value[0] != '<' && program_tokens[itt].value[0] != '>')) {
                     // assignment
                     token operation = program_tokens[itt];
                     token var_name = program_tokens[itt - 1];
