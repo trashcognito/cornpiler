@@ -22,6 +22,7 @@
 #include <llvm/IR/GlobalObject.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <sstream>
 
 extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
@@ -54,6 +55,7 @@ namespace ast {
     class Value {
         public:
         virtual llvm::Value *codegen() const = 0;
+        virtual void print_val(std::stringstream &) const = 0;
         //TODO: maybe make this pure virtual as well?
         virtual const Const* to_const() const;
     };
@@ -66,6 +68,7 @@ namespace ast {
         Value *val;
         llvm::Value *codegen() const;
         Varset(std::string name, Value *val);
+        void print_val(std::stringstream &) const;
     };
 
     class Body : public Value {
@@ -73,6 +76,7 @@ namespace ast {
         std::vector<Value *> body;
         llvm::Value *codegen() const;
         Body(std::vector<Value *> body);
+        void print_val(std::stringstream &) const;
     };
 
     class While : public Value {
@@ -81,6 +85,7 @@ namespace ast {
         Value *condition;
         llvm::Value *codegen() const;
         While(Body *body_a, Value *condition);
+        void print_val(std::stringstream &) const;
     };
 
     class If : public Value {
@@ -90,6 +95,7 @@ namespace ast {
         Value *condition;
         llvm::Value *codegen() const;
         If(Body *body_if,Body *body_else, Value *condition);
+        void print_val(std::stringstream &) const;
     };
 
     class ReturnVal : public Value {
@@ -97,16 +103,19 @@ namespace ast {
         Value *val;
         llvm::Value *codegen() const;
         ReturnVal(Value *val);
+        void print_val(std::stringstream &) const;
     };
 
     class ReturnNull : public Value {
         public:
         llvm::Value *codegen() const;
+        void print_val(std::stringstream &) const;
     };
 
     class Type {
         public:
         virtual llvm::Type *get_type() const = 0;
+        virtual void print_type(std::stringstream &) const = 0;
     };
 
     class Vardef : public Value {
@@ -115,6 +124,7 @@ namespace ast {
         Type *ty;
         llvm::Value *codegen() const;
         Vardef(std::string varname, Type *type);
+        void print_val(std::stringstream &) const;
     };
 
     class IntType : public Type {
@@ -122,12 +132,14 @@ namespace ast {
         int bits;
         IntType(int bits);
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class FloatType : public Type {
         public:
         FloatType();
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class StringType : public Type {
@@ -135,6 +147,7 @@ namespace ast {
         int length;
         StringType(int length);
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class ArrayType : public Type {
@@ -143,6 +156,7 @@ namespace ast {
         Type *inside;
         ArrayType(Type *inside, int len);
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class PointerType : public Type {
@@ -150,12 +164,14 @@ namespace ast {
         Type *to;
         PointerType(Type *to);
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class VoidType : public Type {
         public:
         VoidType();
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
 
     class FunctionType : public Type {
@@ -166,6 +182,7 @@ namespace ast {
         bool varargs;
         FunctionType(std::string name, std::vector<Type *> args, Type *return_type, bool varargs=false);
         llvm::Type *get_type() const;
+        void print_type(std::stringstream &) const;
     };
     class ArrDef : public Value {
         public:
@@ -174,6 +191,7 @@ namespace ast {
         std::string name;
         ArrDef(std::string name, Type *inner, Value *len);
         llvm::Value *codegen() const;
+        void print_val(std::stringstream &) const;
     };
     //float
     //integer
@@ -192,6 +210,7 @@ namespace ast {
         const Const *arg2;
         llvm::Constant *codegen() const;
         ConstOperand(const Const *lhs, const Const *rhs, OperandType op);
+        void print_val(std::stringstream &) const;
     };
     class ConstUnaryOp : public Const {
         public:
@@ -199,6 +218,7 @@ namespace ast {
         UOps op;
         llvm::Constant *codegen() const;
         ConstUnaryOp(UOps operand, const Const *arg);
+        void print_val(std::stringstream &) const;
     };
     class IntegerConst : public Const {
         public:
@@ -206,6 +226,7 @@ namespace ast {
         int bits;
         llvm::Constant *codegen() const;
         IntegerConst(intmax_t i, int bits);
+        void print_val(std::stringstream &) const;
     };
     //todo: add different floats? maybe template?
     class FloatConst : public Const {
@@ -213,6 +234,7 @@ namespace ast {
         float from;
         llvm::Constant *codegen() const;
         FloatConst(float f);
+        void print_val(std::stringstream &) const;
     };
     //TODO: template specializations
     class ArrayConst : public Const {
@@ -221,12 +243,14 @@ namespace ast {
         llvm::Constant *codegen() const;
         Type *t;
         ArrayConst(Type *subtype,std::vector<Const *> from);
+        void print_val(std::stringstream &) const;
     };
     class StringConst : public Const {
         public:
         std::string orig;
         llvm::Constant *codegen() const;
         StringConst(std::string from);
+        void print_val(std::stringstream &) const;
     };
 
     class Operand : public Value {
@@ -238,6 +262,7 @@ namespace ast {
         llvm::Value *codegen() const;
         const Const* to_const() const;
         Operand(Value *lhs, Value *rhs, OperandType op);
+        void print_val(std::stringstream &) const;
     };
 
     class Call : public Value {
@@ -246,6 +271,7 @@ namespace ast {
         ValueArray argvector;
         llvm::Value *codegen() const;
         Call(std::string name, ValueArray args);
+        void print_val(std::stringstream &) const;
     };
 
     class GetVar : public Value {
@@ -253,6 +279,7 @@ namespace ast {
         std::string var_name;
         llvm::Value *codegen() const;
         GetVar(std::string name);
+        void print_val(std::stringstream &) const;
     };
 
     class GetVarPtr : public Value {
@@ -260,6 +287,7 @@ namespace ast {
         std::string var_name;
         llvm::Value *codegen() const;
         GetVarPtr(std::string name);
+        void print_val(std::stringstream &) const;
     };
 
     class Deref : public Value {
@@ -267,6 +295,7 @@ namespace ast {
         Value *p;
         llvm::Value *codegen() const;
         Deref(Value *ptr);
+        void print_val(std::stringstream &) const;
     };
 
     class UnaryOp : public Value {
@@ -277,6 +306,7 @@ namespace ast {
         llvm::Value *codegen() const;
         const Const* to_const() const;
         UnaryOp(UOps operand, Value *arg);
+        void print_val(std::stringstream &) const;
     };
     class Arrget : public Value {
         public:
@@ -284,6 +314,7 @@ namespace ast {
         Value *index;
         llvm::Value *codegen() const;
         Arrget(Value *array, Value *index);
+        void print_val(std::stringstream &) const;
     };
     class Arrset : public Value {
         public:
@@ -292,6 +323,7 @@ namespace ast {
         Value *val;
         llvm::Value *codegen() const;
         Arrset(Value *array, Value *index, Value *val);
+        void print_val(std::stringstream &) const;
     };
     class Arrgetptr : public Value {
         public:
@@ -299,6 +331,7 @@ namespace ast {
         Value *index;
         llvm::Value *codegen() const;
         Arrgetptr(Value *array, Value *indexes);
+        void print_val(std::stringstream &) const;
     };
     class Expr : public Value {
         public:
@@ -306,6 +339,7 @@ namespace ast {
         llvm::Value *codegen() const;
         const Const* to_const() const;
         Expr(Value *inner);
+        void print_val(std::stringstream &) const;
     };
     class Bitcast : public Value {
         public:
@@ -314,6 +348,7 @@ namespace ast {
         llvm::Value *codegen() const;
         const Const* to_const() const;
         Bitcast(Value *thing, Type *type);
+        void print_val(std::stringstream &) const;
     };
     class ConstBitcast : public Const {
         public:
@@ -321,6 +356,7 @@ namespace ast {
         Type *type;
         llvm::Constant *codegen() const;
         ConstBitcast(const Const *thing, Type *type);
+        void print_val(std::stringstream &) const;
     };
 
     class InlineAsm : public Value {
@@ -335,12 +371,15 @@ namespace ast {
         bool is_align_stack;
         //TODO: The constructor is probably gonna need to be changed
         InlineAsm(std::string assembly, std::string constraints, std::vector<Value *> args, bool is_volatile, bool is_align_stack);
+
+        void print_val(std::stringstream &) const;
     };
 
     class GlobalEntry {
         public:
         virtual void codegen() const = 0;
         std::string name;
+        virtual void print_global(std::stringstream &) const = 0;
     };
 
     //Extern declarations
@@ -350,6 +389,7 @@ namespace ast {
         bool constant;
         GlobalPrototype(std::string name, Type *type, bool is_constant=false);
         void codegen() const;
+        void print_global(std::stringstream &) const;
     };
 
     class GlobalFunction : public GlobalEntry {
@@ -359,6 +399,7 @@ namespace ast {
         std::vector<std::string> args;
         GlobalFunction(FunctionType *t, Body *body, std::vector<std::string> args);
         void codegen() const;
+        void print_global(std::stringstream &) const;
     };
 
     class GlobalVariable : public GlobalEntry {
@@ -367,5 +408,6 @@ namespace ast {
         const Const *value;
         GlobalVariable(std::string name, const Const *value, bool is_const=true);
         void codegen() const;
+        void print_global(std::stringstream &) const;
     };
 }

@@ -877,4 +877,427 @@ namespace ast {
             }
         }
     }
+
+    //print commands
+    void Varset::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Varset\",";    //{"ast":"Varset",
+        stream << "\n\"name\":\"" << this->name << "\",";   //"name":"{NAME}",
+        stream << "\n\"value\":"; //"value":
+        this->val->print_val(stream);
+        stream << "}";
+    }
+    void Vardef::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Vardef\",";    //{"ast":"Vardef",
+        stream << "\n\"varname\":\"" << this->varname << "\",";   //"varname":"{VARNAME}",
+        stream << "\n\"type\":"; //"type":
+        this->ty->print_type(stream);
+        stream << "}";
+    }
+    void Body::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Body\",";    //{"ast":"Body",
+        stream << "\n\"inner\": ["; //"inner": [
+        bool is_first_print = true;
+        for (auto item : this->body) {
+            if (is_first_print) {
+                //dont print , for first element
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            item->print_val(stream);
+        }
+        stream << "]}";
+    }
+    void While::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"While\",";    //{"ast":"While",
+        stream << "\n\"condition\":"; //"condition":
+        this->condition->print_val(stream);
+        stream << ",\n\"body\":"; //,"body":
+        this->body->print_val(stream);
+        stream << "}";
+    }
+    void If::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"If\",";    //{"ast":"If",
+        stream << "\n\"condition\":";    //"condition":
+        this->condition->print_val(stream);
+        stream << ",\n\"body_t\":"; //,"body_t":
+        this->body_t->print_val(stream);
+        stream << ",\n\"body_f\":"; //,"body_f":
+        this->body_f->print_val(stream);
+        stream << "}";
+    }
+    void ReturnVal::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ReturnVal\",";    //{"ast":"ReturnVal",
+        stream << "\n\"value\":"; //"value":
+        this->val->print_val(stream);
+        stream << "}";
+    }
+    void ReturnNull::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ReturnNull\"}";    //{"ast":"ReturnNull"}
+    }
+    void IntType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"IntType\",";    //{"type_ast":"IntType",
+        stream << "\n\"bits\":" << this->bits << "}"; //"bits": {BITS} }
+    }
+    void FloatType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"FloatType\"";    //{"type_ast":"FloatType"}
+    }
+    void StringType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"StringType\",";    //{"type_ast":"StringType",
+        stream << "\n\"length\":" << this->length << "}"; //"length": {LENGTH} }
+    }
+    void ArrayType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"ArrayType\",";    //{"type_ast":"ArrayType",
+        stream << "\n\"length\":" << this->length; //"length": {LENGTH}
+        stream << ",\n\"inside\":";   //,"inside":
+        this->inside->print_type(stream);
+        stream << "}";
+    }
+    void PointerType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"PointerType\",";    //{"type_ast":"PointerType",
+        stream << "\n\"to\":"; //"to":
+        this->to->print_type(stream);
+        stream << "}";
+    }
+    void VoidType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"VoidType\"}";    //{"type_ast":"VoidType"}
+    }
+    void FunctionType::print_type(std::stringstream &stream) const {
+        stream << "{\n\"type_ast\":\"FunctionType\",";    //{"type_ast":"FunctionType",
+        stream << "\n\"name\":\"" << this->name << "\",";   //"name":" {NAME} ",
+        stream << "\n\"args\": [";    //"args": [
+        bool is_first_print = true;
+        for (auto thing : this->args) {
+            if (is_first_print) {
+                //dont print the first comma
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            thing->print_type(stream);
+        }
+        stream << "]\n\"return_type\":";    //]"return_type":
+        this->return_type->print_type(stream);
+        stream << ",\n\"varargs\":" << (this->varargs ? "true" : "false") << "}";   //,"varargs": {VARARGS} }
+    }
+    void ArrDef::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ArrDef\",";    //{"ast":"ArrDef",
+        stream << "\n\"name\":\"" << this->name << "\",";   //"name":"{NAME}",
+        stream << "\n\"inner\":"; //"inner":
+        this->inner_type->print_type(stream);
+        stream << ",\n\"length\":"; //,"length":
+        this->length->print_val(stream);
+        stream << "}";
+    }
+    void ConstOperand::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ConstOperand\",";    //{"ast":"ConstOperand",
+        stream << "\n\"op\":\"OperandType::";   //"op":"OperandType::,
+        switch (this->op) {
+            case OperandType::LT:
+                stream << "LT";
+                break;
+            case OperandType::GT:
+                stream << "GT";
+                break;
+            case OperandType::LE:
+                stream << "LE";
+                break;
+            case OperandType::GE:
+                stream << "GE";
+                break;
+            case OperandType::ADD:
+                stream << "ADD";
+                break;
+            case OperandType::SUB:
+                stream << "SUB";
+                break;
+            case OperandType::DIV:
+                stream << "DIV";
+                break;
+            case OperandType::MUL:
+                stream << "MUL";
+                break;
+            case OperandType::MOD:
+                stream << "MOD";
+                break;
+            case OperandType::BITAND:
+                stream << "BITAND";
+                break;
+            case OperandType::BITOR:
+                stream << "BITOR";
+                break;
+            case OperandType::XOR:
+                stream << "XOR";
+                break;
+            case OperandType::EQ:
+                stream << "EQ";
+                break;
+            case OperandType::NEQ:
+                stream << "NEQ";
+                break;
+            case OperandType::BOOL_OR:
+                stream << "BOOL_OR";
+                break;
+            case OperandType::BOOL_AND:
+                stream << "BOOL_AND";
+                break;
+        }
+        stream << "\",\"arg1\":";    //","arg1":
+        this->arg1->print_val(stream);
+        stream << ",\"arg2\":"; //,"arg2":
+        this->arg2->print_val(stream);
+        stream << "}";
+    }
+    void ConstUnaryOp::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ConstUnaryOp\",";    //{"ast":"ConstUnaryOp",
+        stream << "\n\"op\":\"UOps::";    //"op":"UOps::
+        switch (this->op) {
+            case UOps::NOT:
+                stream << "NOT";
+                break;
+            case UOps::NEG:
+                stream << "NEG";
+                break;
+        }
+
+        stream << "\",\"arg\":";    //","arg":
+        this->arg->print_val(stream);
+        stream << "}";
+    }
+    void IntegerConst::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"IntegerConst\",";    //{"ast":"IntegerConst",
+        stream << "\n\"from\":" << this->from << ",";  //"from": {FROM},
+        stream << "\n\"bits\":" << this->bits << "}"; //"bits": {BITS} }
+    }
+    void FloatConst::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"FloatConst\",";    //{"ast":"FloatConst",
+        stream << "\n\"from\":" << this->from << "}";  //"from": {FROM}}
+    }
+    void ArrayConst::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ArrayConst\",";    //{"ast":"ArrayConst",
+        stream << "\n\"subtype\":";  //"subtype":
+        this->t->print_type(stream);
+        stream << ",\n\"from\": [";   //,"from": [
+        bool is_first_print = true;
+        for (auto thing : this->getfrom) {
+            if (is_first_print) {
+                //omit first comma
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            thing->print_val(stream);
+        }
+        stream << "]}"; //]}
+    }
+    void StringConst::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"StringConst\",";    //{"ast":"StringConst",
+        stream << "\n\"orig\": \"" << this->orig << "\" }";  //"orig": "{ORIG}"" }
+    }
+
+    void Operand::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Operand\",";    //{"ast":"Operand",
+        stream << "\n\"op\":\"OperandType::";   //"op":"OperandType::,
+        switch (this->op) {
+            case OperandType::LT:
+                stream << "LT";
+                break;
+            case OperandType::GT:
+                stream << "GT";
+                break;
+            case OperandType::LE:
+                stream << "LE";
+                break;
+            case OperandType::GE:
+                stream << "GE";
+                break;
+            case OperandType::ADD:
+                stream << "ADD";
+                break;
+            case OperandType::SUB:
+                stream << "SUB";
+                break;
+            case OperandType::DIV:
+                stream << "DIV";
+                break;
+            case OperandType::MUL:
+                stream << "MUL";
+                break;
+            case OperandType::MOD:
+                stream << "MOD";
+                break;
+            case OperandType::BITAND:
+                stream << "BITAND";
+                break;
+            case OperandType::BITOR:
+                stream << "BITOR";
+                break;
+            case OperandType::XOR:
+                stream << "XOR";
+                break;
+            case OperandType::EQ:
+                stream << "EQ";
+                break;
+            case OperandType::NEQ:
+                stream << "NEQ";
+                break;
+            case OperandType::BOOL_OR:
+                stream << "BOOL_OR";
+                break;
+            case OperandType::BOOL_AND:
+                stream << "BOOL_AND";
+                break;
+        }
+        stream << "\",\"arg1\":";    //","arg1":
+        this->arg1->print_val(stream);
+        stream << ",\"arg2\":"; //,"arg2":
+        this->arg2->print_val(stream);
+        stream << "}";
+    }
+    void Call::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Call\",";    //{"ast":"Call",
+        stream << "\n\"function_name\":\"" << this->function_name << "\",";   //"function_name":"{FUNCTION_NAME}",
+        stream << "\n\"argvector\": ["; //"argsvector": [
+        bool is_first_print = true;
+        for (auto thing : this->argvector) {
+            if (is_first_print) {
+                //omit first comma
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            thing->print_val(stream);
+        }
+        stream << "]}"; // ]}
+    }
+    void GetVar::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"GetVar\",";    //{"ast":"GetVar",
+        stream << "\n\"var_name\":\"" << this->var_name << "\"}";   //"var_name":"{NAME} }"
+    }
+    void GetVarPtr::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"GetVarPtr\",";    //{"ast":"GetVarPtr",
+        stream << "\n\"var_name\":\"" << this->var_name << "\"}";   //"var_name":"{NAME} }"
+    }
+    void Deref::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Deref\",";    //{"ast":"Deref",
+        stream << "\n\"p\":"; //"p":
+        this->p->print_val(stream);
+        stream << "}";  //}
+    }
+    void UnaryOp::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"UnaryOp\",";    //{"ast":"UnaryOp",
+        stream << "\n\"op\":\"UOps::";    //"op":"UOps::
+        switch (this->op) {
+            case UOps::NOT:
+                stream << "NOT";
+                break;
+            case UOps::NEG:
+                stream << "NEG";
+                break;
+        }
+
+        stream << "\",\"arg\":";    //","arg":
+        this->arg->print_val(stream);
+        stream << "}";
+    }
+    void Arrget::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Arrget\",";    //{"ast":"Arrget",
+        stream << "\n\"array\":"; //"array":
+        this->array->print_val(stream);
+        stream << ",\n\"index\":";  //,"index":
+        this->index->print_val(stream);
+        stream << "}";  //}
+    }
+    void Arrset::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Arrset\",";    //{"ast":"Arrset",
+        stream << "\n\"array\":"; //"array":
+        this->array->print_val(stream);
+        stream << ",\n\"index\":";  //,"index":
+        this->index->print_val(stream);
+        stream << ",\n\"val\":";  //,"val":
+        this->val->print_val(stream);
+        stream << "}";  //}
+    }
+    void Arrgetptr::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Arrgetptr\",";    //{"ast":"Arrgetptr",
+        stream << "\n\"array\":"; //"array":
+        this->array->print_val(stream);
+        stream << ",\n\"index\":";  //,"index":
+        this->index->print_val(stream);
+        stream << "}";  //}
+    }
+    void Expr::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Expr\",";    //{"ast":"Expr",
+        stream << "\n\"actual\":"; //"actual":
+        this->actual->print_val(stream);
+        stream << "}";  //}
+    }
+    void Bitcast::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"Bitcast\",";    //{"ast":"Bitcast",
+        stream << "\n\"thing\":";   //"thing":
+        this->thing->print_val(stream);
+        stream << ",\n\"type\":";   //,"type":
+        this->type->print_type(stream);
+        stream << "}";  //}
+    }
+    void ConstBitcast::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"ConstBitcast\",";    //{"ast":"ConstBitcast",
+        stream << "\n\"thing\":";   //"thing":
+        this->thing->print_val(stream);
+        stream << ",\n\"type\":";   //,"type":
+        this->type->print_type(stream);
+        stream << "}";  //}
+    }
+    void InlineAsm::print_val(std::stringstream &stream) const {
+        stream << "{\n\"ast\":\"InlineAsm\",";    //{"ast":"InlineAsm",
+        stream << "\n\"asmstring\": \"" << this->asmstring << "\",";    //"asmstring": " {ASMSTRING} ",
+        stream << "\n\"constraints\": \"" << this->constraints << "\",";    //"constraints": " {CONSTRAINTS} ",
+        stream << "\n\"args\": [";  //"args": [
+        bool is_first_print = true;
+        for (auto thing : this->args) {
+            if (is_first_print) {
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            thing->print_val(stream);
+        }
+        stream << "],\n\"is_volatile\":" << (this->is_volatile ? "true" : "false") << ",";  //],"is_volatile": {IS_VOLATILE} ,
+        stream << "\n\"is_align_stack\":" << (this->is_align_stack ? "true" : "false") << "}";  //"is_align_stack": {IS_ALIGN_STACK} }
+    }
+    //Global declaration prints
+    void GlobalPrototype::print_global(std::stringstream &stream) const {
+        stream << "{\n\"global_ast\":\"GlobalPrototype\",";    //{"global_ast":"GlobalPrototype",
+        stream << "\n\"name\": \"" << this->name << "\",";  //"name": " {NAME} ",
+        stream << "\n\"type\":";    //"type":
+        this->type->print_type(stream);
+        stream << ",\n\"constant\": " << (this->constant ? "true" : "false") << "}";   //,"constant": {CONSTANT} }
+    }
+    void GlobalFunction::print_global(std::stringstream &stream) const {
+        stream << "{\n\"global_ast\":\"GlobalFunction\",";    //{"global_ast":"GlobalFunction",
+        stream << "\n\"name\": \"" << this->name << "\",";  //"name": " {NAME} ",
+        stream << "\n\"type\":";    //"type":
+        this->type->print_type(stream);
+        stream << ",\n\"body\":";   //,"body":
+        this->body->print_val(stream);
+        stream << ",\n\"args\": [";   //,"args": [
+        bool is_first_print = true;
+        for (auto thing : this->args) {
+            if (is_first_print) {
+                //omit first comma
+                is_first_print = false;
+            } else {
+                stream << ",";
+            }
+            stream << "\"" << thing << "\"";
+        }
+        stream << "]}"; //]}
+    }
+    void GlobalVariable::print_global(std::stringstream &stream) const {
+        stream << "{\n\"global_ast\":\"GlobalVariable\",";    //{"global_ast":"GlobalVariable",
+        stream << "\n\"name\": \"" << this->name << "\",";  //"name": " {NAME} ",
+        stream << "\n\"value\":";    //"value":
+        this->value->print_val(stream);
+        stream << ",\n\"constant\": " << (this->constant ? "true" : "false") << "}";   //,"constant": {CONSTANT} }
+    }
 }
