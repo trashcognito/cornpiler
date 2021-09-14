@@ -410,4 +410,6 @@ namespace ast {
         void codegen() const;
         void print_global(std::stringstream &) const;
     };
+
+    void print_program_to(std::vector<GlobalEntry *> &, std::stringstream &);
 }
