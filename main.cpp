@@ -415,6 +415,7 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
           break;
         case act_type::extdef:
           global_entries.push_back((ast::GlobalEntry *)new ast::GlobalPrototype(
+              dynamic_cast<ast_types::fundef *>(e)->name.value,
               new ast::FunctionType(
                   dynamic_cast<ast_types::fundef *>(e)->name.value,
                   recursive_translate_type({scope_element::global,
