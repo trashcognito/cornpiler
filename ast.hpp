@@ -106,7 +106,6 @@ namespace ast {
 
     class Type {
         public:
-        std::string name;
         virtual llvm::Type *get_type() const = 0;
     };
 
@@ -161,6 +160,7 @@ namespace ast {
 
     class FunctionType : public Type {
         public:
+        std::string name;
         Type *return_type;
         std::vector<Type *> args;
         bool varargs;
@@ -348,7 +348,7 @@ namespace ast {
         public:
         Type *type;
         bool constant;
-        GlobalPrototype(Type *type, bool is_constant=false);
+        GlobalPrototype(std::string name, Type *type, bool is_constant=false);
         void codegen() const;
     };
 
