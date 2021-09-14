@@ -625,8 +625,8 @@ namespace ast {
         return value;
     }
 
-    GlobalPrototype::GlobalPrototype(Type *type, bool is_constant) {
-        this->name = type->name;
+    GlobalPrototype::GlobalPrototype(std::string name, Type *type, bool is_constant) {
+        this->name = name;
         this->constant = is_constant;
         this->type = type;
     }
