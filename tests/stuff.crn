@@ -3,5 +3,5 @@ fun sum a:int64 b:int64 => int64 {
 }
 
 fun main => int64 {
-  return(afunc(1, 3))
+  return(sum(1, 3))
 }
