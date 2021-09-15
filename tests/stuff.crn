@@ -1,5 +1,5 @@
+ext print => none
+
 fun main => int64 {
-  return(
-    (1 + 2) + 2
-  )
+  return(0)
 }

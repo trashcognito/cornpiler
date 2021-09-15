@@ -135,7 +135,7 @@ std::string ast_types::statement_with_two_bodies::print_node() {
 }
 std::string ast_types::varop::print_node() {
   return "\"varop\": {\"name\":" + this->name.print_node() +
-         ",var: " + this->var.print_node() + "}";
+         ",\"var\": " + this->var.print_node() + "}";
 }
 std::string ast_types::vardef::print_node() {
   return "\"vardef\": {\"name\":" + this->name.print_node() +
@@ -729,8 +729,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
-                  itt -= 1;
-                  recursive_lex(itt, new_scope, 1,
+                  recursive_lex(--itt, new_scope, 1,
                                 entry_bracket('(', ')'));  // args lexing
                 } else {
                   --itt;
@@ -865,9 +864,11 @@ ast_types::global_scope lex_program(file_object input_file,
               } else if (initial_token.value ==
                          "ext") {  // TODO: autodetect and deprecate
                                    // external function
-                ast_types::fundef *to_append = new ast_types::fundef;
+                ast_types::extdef *to_append = new ast_types::extdef;
                 to_append->name = look_ahead().value;
                 int appended_index = append_ast_scope(scope, to_append);
+              
+                look_ahead();
 
                 while (program_tokens[itt].value != "=>") {
                   look_ahead();
@@ -985,9 +986,8 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, to_append));
                   new_scope.push_back(scope_element::args);
-                  int tmp_itt = recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(itt, new_scope, 1,
                                               entry_bracket('(', ')'));  // args lexing
-                  itt = tmp_itt;
                   continue;
                 }
               } else if (initial_token.value == "[") {
