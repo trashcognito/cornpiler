@@ -331,7 +331,7 @@ std::vector<token> tokenize_program(std::string program, int length,
       } else if (c == 'r') {
         status.full_token += '\r';
       } else {
-        error_out(std::string("Invalid escape character: \\").append(c));
+        error_out(std::string("Invalid escape character: \\") + (c));
       }
     };
 
