@@ -976,7 +976,7 @@ namespace ast {
             }
             thing->print_type(stream);
         }
-        stream << "]\n\"return_type\":";    //]"return_type":
+        stream << "],\n\"return_type\":";    //]"return_type":
         this->return_type->print_type(stream);
         stream << ",\n\"varargs\":" << (this->varargs ? "true" : "false") << "}";   //,"varargs": {VARARGS} }
     }

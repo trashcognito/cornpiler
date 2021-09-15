@@ -463,6 +463,11 @@ int main(int argc, char *argv[]) {
   // TODO: Fill this up with the program
   auto program = get_program(&logger);
 
+  std::string str_program = "";
+  std::stringstream program_ast(str_program);
+  print_program_to(program, program_ast);
+  std::cout << "" << program_ast.str() << std::endl; 
+
   // PROGRAM CODEGEN
   for (auto entry = program.begin(); entry != program.end(); entry++) {
     (*entry)->codegen();

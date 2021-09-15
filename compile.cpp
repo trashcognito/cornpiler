@@ -729,6 +729,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
+                  itt -= 1;
                   recursive_lex(itt, new_scope, 1,
                                 entry_bracket('(', ')'));  // args lexing
                 } else {

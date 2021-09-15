@@ -1,9 +1,5 @@
 fun main => int64 {
-  var int64 i = 10
-  var int64 retval = 0
-  while(i >= 0){
-    retval = retval + 1
-    i = i - 1
-  }
-  return(retval)
+  return(
+    (1 + 2) + 2
+  )
 }
