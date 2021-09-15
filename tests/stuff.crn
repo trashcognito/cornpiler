@@ -1,5 +1,7 @@
-ext print => none
+fun sum a:int64 b:int64 => int64 {
+  return(a + b)
+}
 
 fun main => int64 {
-  return(0)
+  return(afunc(1, 3))
 }
