@@ -25,6 +25,7 @@
 #include "ast.hpp"
 #include "compile.hpp"
 #include "compiler_frontend.hpp"
+#include "parse_cli.hpp"
 
 std::unique_ptr<llvm::LLVMContext> TheContext;
 std::unique_ptr<llvm::IRBuilder<>> Builder;
@@ -450,6 +451,16 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
 }
 
 int main(int argc, char *argv[]) {
+  //TODO: Handle help
+  ArgParse args({
+      Arg('h', "help", ArgType::flag),
+      Arg('v', "version", ArgType::flag),
+      Arg('O', "optimize", ArgType::value),
+      Arg('o', "output", ArgType::val_always_sep),
+  });
+
+  args.parse_args(argc, argv);
+
   logger::logger logger(logger::LOG_LEVEL::DEBUG | logger::LOG_LEVEL::INFO |
                         logger::LOG_LEVEL::WARNING | logger::LOG_LEVEL::ERROR |
                         logger::LOG_LEVEL::NONE);
@@ -461,7 +472,60 @@ int main(int argc, char *argv[]) {
 
   init_module();
   // TODO: Fill this up with the program
-  auto program = get_program(&logger);
+
+  if (args.files.size() == 0) {
+    logger.log(logger::LOG_LEVEL::ERROR, "No files given in command line!");
+    exit(-1);
+  }
+  //TODO: Maybe handle better?
+  if (args.files.size() > 1) {
+    logger.log(logger::LOG_LEVEL::ERROR, "Too many files given in command line!");
+    exit(-1);
+  }
+  llvm::PassBuilder::OptimizationLevel optim_level;
+  if (args.adds.count("optimize")) {
+    //optimize arg given - parse optimize arg
+    //TODO: Error checking needed here
+    //TODO: Optimize for size should also be parsed!
+    auto opt = std::stoi(args.adds["optimize"]);
+    if (opt < 0) {
+      //TODO: Better error message
+      logger.log(logger::LOG_LEVEL::ERROR, "Invalid optimizer level!");
+      exit(-1);
+    }
+    switch (opt) {
+      case 0:
+        optim_level = llvm::PassBuilder::OptimizationLevel::O0;
+        break;
+      case 1:
+        optim_level = llvm::PassBuilder::OptimizationLevel::O1;
+        break;
+      case 2:
+        optim_level = llvm::PassBuilder::OptimizationLevel::O2;
+        break;
+      case 3:
+        optim_level = llvm::PassBuilder::OptimizationLevel::O3;
+        break;
+      default:
+        //Assumes O > 3
+        optim_level = llvm::PassBuilder::OptimizationLevel::O3;
+        break;
+    }
+  } else {
+    //No argument given, -O2 by default
+    //TODO: Maybe reconsider?
+    optim_level = llvm::PassBuilder::OptimizationLevel::O2;
+  }
+  std::string output_file;
+  if (args.adds.count("output")) {
+    output_file = args.adds["output"];
+  } else {
+    //TODO: maybe just generate a.out instead?
+    logger.log(logger::LOG_LEVEL::ERROR, "No output file name given!");
+    exit(-1);
+  }
+  
+  auto program = get_program(&logger, args.files[0]);
 
   // PROGRAM CODEGEN
   for (auto entry = program.begin(); entry != program.end(); entry++) {
@@ -511,15 +575,14 @@ int main(int argc, char *argv[]) {
 
   llvm::ModulePassManager module_pass_manager =
       pb.buildPerModuleDefaultPipeline(
-          llvm::PassBuilder::OptimizationLevel::O2);
+          optim_level);
 
   module_pass_manager.run(*TheModule, mam);
   // re-verify post optimization
   llvm::verifyModule(*TheModule, &llvm::errs());
   // TODO: get output file name
-  auto outfile = "output.o";
   std::error_code EC;
-  llvm::raw_fd_ostream dest(outfile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream dest(output_file, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
     llvm::errs() << "Could not open file: " << EC.message();
@@ -538,6 +601,6 @@ int main(int argc, char *argv[]) {
 
   pass.run(*TheModule);
   dest.flush();
-  llvm::outs() << "Wrote output to " << outfile << "\n";
+  llvm::outs() << "Wrote output to " << output_file << "\n";
   return 0;
 }
