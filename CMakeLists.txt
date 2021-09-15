@@ -12,7 +12,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-add_executable(cornpiler main.cpp ast.cpp compiler_frontend.cpp compile.cpp)
+add_executable(cornpiler main.cpp ast.cpp compiler_frontend.cpp compile.cpp parse_cli.cpp)
 execute_process(COMMAND llvm-config-12 --system-libs --link-shared --libs all
                 OUTPUT_VARIABLE llvm_libs
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
