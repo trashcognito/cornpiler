@@ -1,9 +1,7 @@
+fun sum a:int64 b:int64 => int64 {
+  return(a + b)
+}
+
 fun main => int64 {
-  var int64 i = 10
-  var int64 retval = 0
-  while(i >= 0){
-    retval = retval + 1
-    i = i - 1
-  }
-  return(retval)
+  return(sum(1, 3))
 }

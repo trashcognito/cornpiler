@@ -185,6 +185,7 @@ class arg_with_type_t : public with_type, virtual public AST {
  public:
   string_t name;
   arg_with_type_t();
+  std::string print_node() override;
 };
 class with_args_with_type : virtual public AST {
  public:

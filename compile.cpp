@@ -96,8 +96,8 @@ ast_types::expr::expr() { act = act_type::expr; }
 ast_types::arrset::arrset() { act = act_type::arrset; }
 ast_types::arrget::arrget() { act = act_type::arrget; }
 
-std::string AST::print_node() { return ""; }
-std::string AST_node::print_node() { return ""; }
+std::string AST::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
+std::string AST_node::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
 std::string ast_body::print_node() {
   std::string retval = "[";
   for (auto &i : this->body) {
@@ -135,7 +135,7 @@ std::string ast_types::statement_with_two_bodies::print_node() {
 }
 std::string ast_types::varop::print_node() {
   return "\"varop\": {\"name\":" + this->name.print_node() +
-         ",var: " + this->var.print_node() + "}";
+         ",\"var\": " + this->var.print_node() + "}";
 }
 std::string ast_types::vardef::print_node() {
   return "\"vardef\": {\"name\":" + this->name.print_node() +
@@ -197,6 +197,10 @@ std::string ast_types::arrset::print_node() {
 std::string ast_types::arrget::print_node() {
   return "\"arrget\": {\"index\":" + this->index.print_node() +
          ",\"arr\": " + this->array.print_node() + "}";
+}
+std::string ast_types::arg_with_type_t::print_node() {
+  return "\"arg_with_type\": {\"type\":" + this->type.print_node() +
+         ",\"name\":" + this->name.print_node() + "}";
 }
 
 file_object read_file(const char *filename, logger::logger *logger) {
@@ -327,7 +331,7 @@ std::vector<token> tokenize_program(std::string program, int length,
       } else if (c == 'r') {
         status.full_token += '\r';
       } else {
-        error_out("Invalid escape character: \\" + c);
+        error_out(std::string("Invalid escape character: \\") + (c));
       }
     };
 
@@ -729,7 +733,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
-                  recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(--itt, new_scope, 1,
                                 entry_bracket('(', ')'));  // args lexing
                 } else {
                   --itt;
@@ -864,9 +868,11 @@ ast_types::global_scope lex_program(file_object input_file,
               } else if (initial_token.value ==
                          "ext") {  // TODO: autodetect and deprecate
                                    // external function
-                ast_types::fundef *to_append = new ast_types::fundef;
+                ast_types::extdef *to_append = new ast_types::extdef;
                 to_append->name = look_ahead().value;
                 int appended_index = append_ast_scope(scope, to_append);
+
+                look_ahead();
 
                 while (program_tokens[itt].value != "=>") {
                   look_ahead();
@@ -903,8 +909,10 @@ ast_types::global_scope lex_program(file_object input_file,
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
-                  recursive_lex(itt, new_scope, 1,
-                                entry_bracket('(', ')'));  // args lexing
+                  while (program_tokens[itt].value != ")") {
+                    itt = recursive_lex(itt, new_scope, 1,
+                                        entry_bracket('(', ')'));  // args lexing
+                  }
                 } else {
                   // this should be a variable
                   // since we have already incremented itt, we can check whether
@@ -984,9 +992,8 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, to_append));
                   new_scope.push_back(scope_element::args);
-                  int tmp_itt = recursive_lex(itt, new_scope, 1,
-                                              entry_bracket('(', ')'));  // args lexing
-                  itt = tmp_itt;
+                  itt = recursive_lex(itt, new_scope, 1,
+                                      entry_bracket('(', ')'));  // args lexing
                   continue;
                 }
               } else if (initial_token.value == "[") {
@@ -1081,6 +1088,8 @@ ast_types::global_scope lex_program(file_object input_file,
               error_out("Unnecessary seperator found", program_tokens[itt],
                         logger::LOG_LEVEL::WARNING, false);
             }
+            case token_type::semi:
+            break;
           }
           if (!try_continue)
             break;
