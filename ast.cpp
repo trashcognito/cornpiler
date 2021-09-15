@@ -491,6 +491,8 @@ namespace ast {
     llvm::Value *Call::codegen() const {
         //TODO: implement calling function from local scope?
         auto fun = TheModule->getFunction(function_name);
+        if (!fun) throw std::string("Could not find function ")
+            .append(function_name);
         std::vector<llvm::Value *> args;
         for (auto i = argvector.begin(); i != argvector.end(); ++i) {
             args.push_back((*i)->codegen());

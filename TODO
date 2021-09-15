@@ -1,3 +1,4 @@
 Make every test case run correctly
 Split off the lower AST into its own folder, make every AST node inhabit its own .cpp file
 Make inline assembly work
+Proper error handling
