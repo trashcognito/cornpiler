@@ -1088,6 +1088,8 @@ ast_types::global_scope lex_program(file_object input_file,
               error_out("Unnecessary seperator found", program_tokens[itt],
                         logger::LOG_LEVEL::WARNING, false);
             }
+            case token_type::semi:
+            break;
           }
           if (!try_continue)
             break;

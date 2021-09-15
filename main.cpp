@@ -168,6 +168,8 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                            ->type.value == "float") {
               logger->log(logger::LOG_LEVEL::WARNING,
                           "Float type not implemented yet");
+            } else {
+              throw std::runtime_error("Invalid data type");
             }
             break;
           case act_type::outtype: {
@@ -188,10 +190,16 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                            ->name.value == "unsigned") {
               logger->log(logger::LOG_LEVEL::WARNING,
                           "Unsigned type not implemented yet");
+            } else {
+              throw std::runtime_error("Invalid data type");
             }
             break;
           }
+          default:
+            throw std::runtime_error("Invalid data type");
+            break;
         }
+        throw std::runtime_error("Invalid data type");
       };
 
   auto recursive_translate_type = [&](std::vector<scope_element> scope) {
@@ -377,10 +385,16 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                     if (op == "|") return ast::OperandType::BITOR;
                     if (op == "&&") return ast::OperandType::BOOL_AND;
                     if (op == "||") return ast::OperandType::BOOL_OR;
-                    if (op == "^") return ast::OperandType::XOR;
+                    if (op == "^")
+                      return ast::OperandType::XOR;
+                    else
+                      throw std::runtime_error("Unknown operator");
                   }()));
               break;
             }
+            default:
+              throw std::runtime_error("Unknown action type");
+              break;
           }
           i++;
         }
@@ -440,6 +454,9 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   ->to_const(),
               false));
           break;
+        default:
+          throw std::runtime_error("Unknown global action type");
+          break;
       }
       i++;
     }
@@ -466,7 +483,7 @@ int main(int argc, char *argv[]) {
   std::string str_program = "";
   std::stringstream program_ast(str_program);
   print_program_to(program, program_ast);
-  std::cout << "" << program_ast.str() << std::endl; 
+  std::cout << "" << program_ast.str() << std::endl;
 
   // PROGRAM CODEGEN
   for (auto entry = program.begin(); entry != program.end(); entry++) {
