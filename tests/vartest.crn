@@ -1,7 +1,5 @@
 fun main => none {
-    var str foo = "foo"
-    println(foo)
-    var i5 a = 123
+    var int64 a = 123
     a += 765
     a = a + 112
     print("print test: ")
@@ -12,6 +10,6 @@ fun main => none {
     }
     println("$n".fmt(a))
 
-    var f c = 1.234
+    var float c = 1.234
     println("$f".fmt(c))
 }
