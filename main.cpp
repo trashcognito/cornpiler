@@ -393,6 +393,14 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   }()));
               break;
             }
+            case act_type::scope: {
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)i);
+              new_scope.push_back(scope_element::body);
+              args.push_back(new ast::Body(
+                  recursive_translate_body(new_scope)));
+              break;
+            }
             default:
               throw std::runtime_error("Unknown action type");
               break;
@@ -525,6 +533,7 @@ int main(int argc, char *argv[]) {
         break;
       default:
         //Assumes O > 3
+        // This is a bad idea, can we please reconsider?
         optim_level = llvm::PassBuilder::OptimizationLevel::O3;
         break;
     }
@@ -541,7 +550,7 @@ int main(int argc, char *argv[]) {
     logger.log(logger::LOG_LEVEL::ERROR, "No output file name given!");
     exit(-1);
   }
-  
+
   auto program = get_program(&logger, args.files[0]);
 
   std::string str_program = "";

@@ -90,6 +90,7 @@ enum class act_type {
   arrget,
   outtype,
   global,
+  scope,
 };
 
 class entry_bracket {
@@ -346,6 +347,13 @@ class arrget : virtual public AST, public AST_node {
   arrget();
   std::string print_node() override;
 };
+
+class scope : public with_body, public AST_node {
+ public:
+  scope();
+  std::string print_node() override;
+};
+
 }  // namespace ast_types
 
 file_object read_file(const char *filename, logger::logger *logger);

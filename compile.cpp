@@ -95,6 +95,7 @@ ast_types::oper::oper() { act = act_type::oper; }
 ast_types::expr::expr() { act = act_type::expr; }
 ast_types::arrset::arrset() { act = act_type::arrset; }
 ast_types::arrget::arrget() { act = act_type::arrget; }
+ast_types::scope::scope() { act = act_type::scope; }
 
 std::string AST::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
 std::string AST_node::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
@@ -201,6 +202,9 @@ std::string ast_types::arrget::print_node() {
 std::string ast_types::arg_with_type_t::print_node() {
   return "\"arg_with_type\": {\"type\":" + this->type.print_node() +
          ",\"name\":" + this->name.print_node() + "}";
+}
+std::string ast_types::scope::print_node() {
+  return "\"scope\": {\"body\":" + this->body.print_node() + "}";
 }
 
 file_object read_file(const char *filename, logger::logger *logger) {
@@ -659,6 +663,10 @@ ast_types::global_scope lex_program(file_object input_file,
             case token_type::identifier: {
               if (initial_token.value == "for") {
                 ast_types::statement_with_body *to_append = new ast_types::statement_with_body;
+
+                ast_types::scope *to_append_scope = new ast_types::scope;
+                int appended_scope_id = append_ast_scope(scope, to_append_scope);
+
                 to_append->name = ast_types::string_t("while");
                 int appended_index = -1;
                 look_ahead();
@@ -666,6 +674,9 @@ ast_types::global_scope lex_program(file_object input_file,
                 int incr_cnt = 0;
                 while (program_tokens[itt].value != ")") {
                   std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back((scope_element)appended_scope_id);
+                  new_scope.push_back(scope_element::body);
+
                   if (incr_cnt == 1) {
                     new_scope.push_back((scope_element)appended_index);
                     new_scope.push_back(scope_element::args);
@@ -684,6 +695,8 @@ ast_types::global_scope lex_program(file_object input_file,
                 }
                 look_ahead();
                 std::vector<scope_element> new_scope = scope;
+                new_scope.push_back((scope_element)appended_scope_id);
+                new_scope.push_back(scope_element::body);
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
                 itt = recursive_lex(itt, new_scope, 0, entry_bracket('{', '}'));
@@ -1063,6 +1076,16 @@ ast_types::global_scope lex_program(file_object input_file,
                 //   append_ast_scope(scope, to_append);
                 // }
                 try_continue = false;
+              } else if (initial_token.value == "{" && itt != 0) {
+                // user defined scope
+                ast_types::scope *to_append = new ast_types::scope;
+
+                std::vector<scope_element> new_scope = scope;
+                new_scope.push_back(
+                    (scope_element)append_ast_scope(new_scope, to_append));
+                new_scope.push_back(scope_element::body);
+
+                itt = recursive_lex(itt, new_scope, 0, entry_bracket('{', '}'));
               }
               break;
             }
