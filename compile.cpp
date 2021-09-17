@@ -10,53 +10,11 @@ std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "decimal", "br
                                    "semi", "sep", "sym"};
 AST::~AST() {}
 
-logger::LOG_LEVEL logger::operator|(LOG_LEVEL lhs, LOG_LEVEL rhs) {
-  return (LOG_LEVEL)((int)lhs | (int)rhs);
-}
-logger::LOG_LEVEL logger::operator&(LOG_LEVEL lhs, LOG_LEVEL rhs) {
-  return (LOG_LEVEL)((int)lhs & (int)rhs);
-}
-logger::SETTINGS logger::operator|(SETTINGS lhs, SETTINGS rhs) {
-  return (SETTINGS)((int)lhs | (int)rhs);
-}
-logger::SETTINGS logger::operator&(SETTINGS lhs, SETTINGS rhs) {
-  return (SETTINGS)((int)lhs & (int)rhs);
-}
-std::string logger::logger::log_level_text(LOG_LEVEL lvl) {
-  std::string retval = "";
-  if ((int)lvl & (int)LOG_LEVEL::NONE) {
-    retval += "| NONE ";
-  }
-  if ((int)lvl & (int)LOG_LEVEL::ERROR) {
-    retval += "| ERROR ";
-  }
-  if ((int)lvl & (int)LOG_LEVEL::WARNING) {
-    retval += "| WARNING ";
-  }
-  if ((int)lvl & (int)LOG_LEVEL::INFO) {
-    retval += "| INFO ";
-  }
-  if ((int)lvl & (int)LOG_LEVEL::DEBUG) {
-    retval += "| DEBUG ";
-  }
-  retval.erase(0, 1);
-  return retval;
-}
-void logger::logger::log(LOG_LEVEL level, std::string msg, SETTINGS settings) {
-  if ((int)(level & logger::level) == 0)
-    return;
-  if ((int)(settings & SETTINGS::TYPE) != 0)
-    std::cout << "[" << log_level_text(level) << "] ";
-  std::cout << msg;
-  if ((int)(settings & SETTINGS::NEWLINE) != 0)
-    std::cout << std::endl;
-}
-
-logger::logger::logger(LOG_LEVEL log) { level = log; }
 entry_bracket::entry_bracket(char f, char s) {
   first = f;
   second = s;
 }
+
 token::token(token_type t, std::string v, int r, int c, int ch) {
   type = t;
   value = v;
@@ -1175,20 +1133,3 @@ ast_types::global_scope lex_program(file_object input_file,
 
   return globals;
 }
-
-// int main() {
-//   logger::logger logger(logger::LOG_LEVEL::DEBUG | logger::LOG_LEVEL::INFO |
-//   logger::LOG_LEVEL::WARNING | logger::LOG_LEVEL::ERROR |
-//   logger::LOG_LEVEL::NONE);
-
-//   logger.log(logger::LOG_LEVEL::DEBUG, "Logger Test");
-
-//   file_object input_file = read_file("tests/helloworld.crn", &logger);
-//   std::vector<token> program_tokens = tokenize_program(input_file.contents,
-//   input_file.length, &logger);
-
-//   ast_types::global_scope lexed_program = lex_program(input_file,
-//   program_tokens, &logger);
-
-//   return EXIT_SUCCESS;
-// }
