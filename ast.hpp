@@ -22,12 +22,15 @@
 #include <llvm/IR/GlobalObject.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/InlineAsm.h>
 #include <sstream>
 
 extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
 extern std::unique_ptr<llvm::Module> TheModule;
+extern std::vector<std::map<std::string, llvm::AllocaInst *>> LocalScope;
 namespace ast {
+    llvm::Value *resolve_var_scope(std::string key);
     enum class OperandType {
         LT,
         GT,
@@ -108,6 +111,7 @@ namespace ast {
 
     class ReturnNull : public Value {
         public:
+        ReturnNull();
         llvm::Value *codegen() const;
         void print_val(std::stringstream &) const;
     };
