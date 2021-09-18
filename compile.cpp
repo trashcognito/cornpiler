@@ -1,194 +1,19 @@
 #include "compile.hpp"
 
 #include <cstdlib>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <vector>
 
 std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "decimal", "bracket",
                                    "semi", "sep", "sym"};
-AST::~AST() {}
 
 entry_bracket::entry_bracket(char f, char s) {
   first = f;
   second = s;
 }
 
-token::token(token_type t, std::string v, int r, int c, int ch) {
-  type = t;
-  value = v;
-  row = r;
-  col = c;
-  chr = ch;
-}
-ast_types::string_t::string_t(std::string v) { value = v; }
-ast_types::string_t::string_t(char v) { value = std::string(1, v); }
-ast_types::char_t::char_t(char v) { value = v; }
-ast_types::number_t::number_t(int v) { value = v; }
-ast_types::decimal_t::decimal_t(float v) { value = v; }
-ast_types::arg_with_type_t::arg_with_type_t() { name = string_t(""); }
-ast_types::global_scope::global_scope() { act = act_type::global; }
-ast_types::statement::statement() { act = act_type::statement; }
-ast_types::statement_with_body::statement_with_body() {
-  act = act_type::statement_with_body;
-}
-ast_types::statement_with_two_bodies::statement_with_two_bodies() {
-  act = act_type::statement_with_two_bodies;
-}
-ast_types::varop::varop() { act = act_type::varop; }
-ast_types::vardef::vardef() { act = act_type::vardef; }
-ast_types::in_type::in_type() { act = act_type::type; }
-ast_types::out_type::out_type() { act = act_type::outtype; }
-ast_types::extdef::extdef() { act = act_type::extdef; }
-ast_types::fundef::fundef() { act = act_type::fundef; }
-ast_types::glbdef::glbdef() { act = act_type::glbdef; }
-ast_types::call::call() { act = act_type::call; }
-ast_types::varset::varset() { act = act_type::varset; }
-ast_types::getvar::getvar() { act = act_type::getvar; }
-ast_types::const_str::const_str() { act = act_type::const_str; }
-ast_types::const_int::const_int() { act = act_type::const_int; }
-ast_types::const_decimal::const_decimal() { act = act_type::const_decimal; }
-ast_types::oper::oper() { act = act_type::oper; }
-ast_types::expr::expr() { act = act_type::expr; }
-ast_types::arrset::arrset() { act = act_type::arrset; }
-ast_types::arrget::arrget() { act = act_type::arrget; }
-ast_types::scope::scope() { act = act_type::scope; }
 
-std::string AST::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
-std::string AST_node::print_node() { return "WHY THE FUCK ARE YOU PRINTING ME DUMBASS"; }
-std::string ast_body::print_node() {
-  std::string retval = "[";
-  for (auto &i : this->body) {
-    retval += ",{" + i->print_node() + "}";
-  }
-  if (retval.size() > 1) {
-    retval.erase(1, 1);
-  }
-
-  retval += "]";
-  return retval;
-}
-
-std::string ast_types::string_t::print_node() { return "\"" + value + "\""; }
-std::string ast_types::char_t::print_node() { return "'" + std::string(1, value) + "'"; }
-std::string ast_types::number_t::print_node() { return std::to_string(value); }
-std::string ast_types::decimal_t::print_node() { return std::to_string(value); }
-
-std::string ast_types::global_scope::print_node() {
-  return "{\"globals\":" + this->body.print_node() + "}";
-}
-std::string ast_types::statement::print_node() { return "\"statement\": { \"name\":" +
-                                                        this->name.print_node() +
-                                                        ",\"args\": " + this->args.print_node() + "}"; }
-std::string ast_types::statement_with_body::print_node() {
-  return "\"statement_with_body\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() +
-         ",\"body\": " + this->body.print_node() + "}";
-}
-std::string ast_types::statement_with_two_bodies::print_node() {
-  return "\"statement_with_two_bodies\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() +
-         ",\"body1\": " + this->body.print_node() +
-         ",\"body2\": " + this->second_body.print_node() + "}";
-}
-std::string ast_types::varop::print_node() {
-  return "\"varop\": {\"name\":" + this->name.print_node() +
-         ",\"var\": " + this->var.print_node() + "}";
-}
-std::string ast_types::vardef::print_node() {
-  return "\"vardef\": {\"name\":" + this->name.print_node() +
-         ",\"type\": " + this->type.print_node() +
-         ",\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::in_type::print_node() {
-  return "\"in_type\": {\"type\":" + this->type.print_node() + "}";
-}
-std::string ast_types::out_type::print_node() {
-  return "\"out_type\": {\"type\":" + this->name.print_node() + ",\"inner_type\":" + this->type.print_node() + ",\"length\":" + this->length.print_node() + "}";
-}
-std::string ast_types::extdef::print_node() {
-  return "\"extdef\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() +
-         ",\"return_type\": " + this->return_type.print_node() + "}";
-}
-std::string ast_types::fundef::print_node() {
-  return "\"fundef\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() +
-         ",\"return_type\": " + this->return_type.print_node() +
-         ",\"body\": " + this->body.print_node() + "}";
-}
-std::string ast_types::glbdef::print_node() {
-  return "\"vardef\": {\"name\":" + this->name.print_node() +
-         ",\"type\": " + this->type.print_node() +
-         ",\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::call::print_node() {
-  return "\"call\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::varset::print_node() {
-  return "\"varset\": {\"name\":" + this->name.print_node() +
-         ",\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::getvar::print_node() {
-  return "\"getvar\": {\"name\":" + this->name.print_node() + "}";
-}
-std::string ast_types::const_str::print_node() {
-  return "\"const_str\": {\"value\":" + this->value.print_node() + "}";
-}
-std::string ast_types::const_int::print_node() {
-  return "\"const_int\": {\"value\":" + this->value.print_node() + "}";
-}
-std::string ast_types::const_decimal::print_node() {
-  return "\"const_decimal\": {\"value\":" + this->value.print_node() + "}";
-}
-std::string ast_types::oper::print_node() {
-  return "\"oper\": {\"op\":" + this->op.print_node() +
-         ",\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::expr::print_node() {
-  return "\"expr\": {\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::arrset::print_node() {
-  return "\"arrset\": {\"args\": " + this->args.print_node() + "}";
-}
-std::string ast_types::arrget::print_node() {
-  return "\"arrget\": {\"index\":" + this->index.print_node() +
-         ",\"arr\": " + this->array.print_node() + "}";
-}
-std::string ast_types::arg_with_type_t::print_node() {
-  return "\"arg_with_type\": {\"type\":" + this->type.print_node() +
-         ",\"name\":" + this->name.print_node() + "}";
-}
-std::string ast_types::scope::print_node() {
-  return "\"scope\": {\"body\":" + this->body.print_node() + "}";
-}
-
-file_object read_file(const char *filename, logger::logger *logger) {
-  std::ifstream is(filename);
-  if (!is) {
-    logger->log(logger::LOG_LEVEL::ERROR, "File not found");
-    exit(-1);
-  }
-
-  // is.seekg(0, is.end);
-  // int is_length = is.tellg();
-  // is.seekg(0, is.beg);
-
-  // char *file_buffer = new char[is_length];
-  // int f_iter = 0;
-  // while (!is.eof() && f_iter < is_length) {
-  //   is.get(file_buffer[f_iter]); // reading single character from file to array
-  //   f_iter++;
-  // }
-  // is.close();
-
-  std::string content((std::istreambuf_iterator<char>(is)),
-                      (std::istreambuf_iterator<char>()));
-
-  return file_object(content, content.length());
-}
 bool check_id_constraints(std::string id, char c) {
   bool retval = isalpha(c) || c == '_';
   if (!id.empty())

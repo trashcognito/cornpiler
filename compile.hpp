@@ -51,8 +51,6 @@ bool check_id_constraints(std::string id, char c);
 
 std::vector<token> tokenize_program(std::string program, int length);
 
-
-file_object read_file(const char *filename, logger::logger *logger);
 bool check_id_constraints(std::string id, char c);
 std::vector<token> tokenize_program(std::string program, int length,
                                     logger::logger *logger);
