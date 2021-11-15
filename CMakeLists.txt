@@ -18,7 +18,7 @@ add_subdirectory(ast)
 
 add_subdirectory(pre_ast)
 
-execute_process(COMMAND llvm-config-12 --system-libs --link-shared --libs all
+execute_process(COMMAND llvm-config-13 --system-libs --link-shared --libs all
                 OUTPUT_VARIABLE llvm_libs
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -26,7 +26,7 @@ execute_process(COMMAND llvm-config-12 --system-libs --link-shared --libs all
 
 target_link_libraries(cornpiler ${llvm_libs} ${targets})
 
-target_compile_options(cornpiler PUBLIC -fstandalone-debug)
+target_compile_options(cornpiler PUBLIC )
 
 add_subdirectory(tests)
 
