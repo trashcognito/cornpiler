@@ -3,7 +3,7 @@ project(cornpiler VERSION 0.1.0)
 include(CTest)
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
-find_package(LLVM 12 REQUIRED CONFIG)
+find_package(LLVM 13 REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
