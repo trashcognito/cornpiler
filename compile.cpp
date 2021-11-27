@@ -787,9 +787,10 @@ ast_types::global_scope lex_program(file_object input_file,
               } else if (initial_token.value == "lambda") {
                 ast_types::fundef *to_append = new ast_types::fundef;
                 to_append->name = ast_types::string_t(
-                    " __αnonymous_lambda_at" +
-                    itt);  // the unicode character in the function is illegal
-                           // in the syntax, so we use it to make it anonymous
+                    " __anonymous_lambda_at_" +
+                    std::to_string(itt));  // the unicode character in the
+                                           // function is illegal in the syntax,
+                                           // so we use it to make it anonymous
                 int appended_index =
                     append_ast_scope({scope_element::global}, to_append);
 
@@ -824,7 +825,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   error_out("expected '{' in function definition",
                             program_tokens[itt - 1]);
                 }
-                new_scope = scope;
+                new_scope = {scope_element::global};
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
                 itt = recursive_lex(itt, new_scope, parsing_modes::statement,
@@ -838,13 +839,13 @@ ast_types::global_scope lex_program(file_object input_file,
                 look_ahead();
                 if (program_tokens[itt].value == "(") {
                   // function call
-                  bool self_function = program_tokens[itt - 1].value == ".";
+                  bool class_function = program_tokens[itt - 1].value == ".";
 
                   ast_types::call *to_append = new ast_types::call;
                   to_append->name = ast_types::string_t(initial_token.value);
                   int appended_index = append_ast_scope(scope, to_append);
 
-                  if (self_function) {
+                  if (class_function) {
                     // to_append->args.body.push_back(); TODO
                   }
 
