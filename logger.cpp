@@ -38,8 +38,8 @@ void logger::logger::log(LOG_LEVEL level, std::string msg, SETTINGS settings) {
   if ((int)(level & logger::level) == 0)
     return;
   if ((int)(settings & SETTINGS::TYPE) != 0)
-    std::cout << "[" << log_level_text(level) << "] ";
-  std::cout << msg;
+    std::cout << "[" << log_level_text(level) << "] " << std::flush;
+  std::cout << msg << std::flush;
   if ((int)(settings & SETTINGS::NEWLINE) != 0)
     std::cout << std::endl;
 }

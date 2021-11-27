@@ -282,19 +282,18 @@ ast_types::global_scope lex_program(file_object input_file,
         };
 
         auto goto_ast_scope = [&](std::vector<scope_element> in_scope) {
-          logger->log(logger::LOG_LEVEL::DEBUG, "Reaching into ",
+          logger->log(logger::LOG_LEVEL::DEBUG, "Reaching into",
                       logger::SETTINGS::TYPE);
           AST *that_ast = &(globals);
           int scope_i = 0;
           for (auto s : in_scope) {  // copy, do not reference
             if ((int)s >= 0) {       // int
+              logger->log(logger::LOG_LEVEL::DEBUG,
+                          " > [" + std::to_string((int)s) + "]",
+                          logger::SETTINGS::NONE);
               ast_body *_temp_body = dynamic_cast<ast_body *>(that_ast);
               std::vector<AST *> _temp_inhere = _temp_body->body;
               that_ast = _temp_inhere[(int)s];
-
-              logger->log(logger::LOG_LEVEL::DEBUG,
-                          "> [" + std::to_string((int)s) + "] ",
-                          logger::SETTINGS::NONE);
             } else {
               switch ((scope_element)s) {
                 case scope_element::global:
@@ -302,21 +301,21 @@ ast_types::global_scope lex_program(file_object input_file,
                       &((dynamic_cast<ast_types::global_scope *>(that_ast))
                             ->body);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> global",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > global",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::args:
                   that_ast =
                       &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> args",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > args",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::body:
                   that_ast =
                       &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> body",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > body",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::second_body:
@@ -324,14 +323,14 @@ ast_types::global_scope lex_program(file_object input_file,
                       &((dynamic_cast<ast_types::with_second_body *>(that_ast))
                             ->second_body);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> second_body",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > second_body",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::type:
                   that_ast =
                       &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> type",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > type",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::return_type:
@@ -339,21 +338,21 @@ ast_types::global_scope lex_program(file_object input_file,
                       &((dynamic_cast<ast_types::with_return_type *>(that_ast))
                             ->return_type);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> return_type",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > return_type",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::arr_index:
                   that_ast =
                       &((dynamic_cast<ast_types::arrget *>(that_ast))->index);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> arr_index",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > arr_index",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::arr_array:
                   that_ast =
                       &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> arr_array",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > arr_array",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::argtype:
@@ -361,15 +360,24 @@ ast_types::global_scope lex_program(file_object input_file,
                       (dynamic_cast<ast_types::with_args_with_type *>(that_ast))
                           ->args);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> argtype",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > argtype",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::out_length:
                   that_ast = &(
                       (dynamic_cast<ast_types::out_type *>(that_ast))->length);
 
-                  logger->log(logger::LOG_LEVEL::DEBUG, "> out_length",
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > out_length",
                               logger::SETTINGS::NONE);
+                  break;
+                case scope_element::values:
+                  that_ast =
+                      &((dynamic_cast<ast_types::with_values *>(that_ast))
+                            ->values);
+
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > values",
+                              logger::SETTINGS::NONE);
+                  break;
                 default:
 
                   logger->log(
@@ -469,6 +477,38 @@ ast_types::global_scope lex_program(file_object input_file,
 
               itt = recursive_lex(itt, new_scope, parsing_modes::type,
                                   entry_bracket('(', ')'));  // type lexing
+            } else if (initial_token.value == "fun") {
+              std::cout << "fun" << std::endl;
+              ast_types::fun_type *to_append = new ast_types::fun_type;
+
+              int appended_index = append_ast_scope(scope, to_append);
+
+              look_ahead();
+              while (program_tokens[itt].value != "=>") {
+                std::string arg_name = program_tokens[itt].value;
+                if (look_ahead().value != ":") {
+                  error_out("expected ':' in function argument list",
+                            program_tokens[itt]);
+                }
+                std::vector<scope_element> new_scope = scope;
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::argtype);
+                ast_types::arg_with_type_t *arg_type_t =
+                    new ast_types::arg_with_type_t;
+                arg_type_t->name = ast_types::string_t(arg_name);
+                new_scope.push_back(
+                    (scope_element)append_ast_scope(new_scope, arg_type_t));
+                new_scope.push_back(scope_element::type);
+                itt = recursive_lex(itt, new_scope, parsing_modes::type,
+                                    entry_bracket('(', ')'));  // type lexing
+                look_ahead();
+              }
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::return_type);
+              itt = recursive_lex(itt, new_scope, parsing_modes::type,
+                                  entry_bracket('(', ')'));
+              std::cout << "end fun" << std::endl;
             } else {
               ast_types::in_type *to_append = new ast_types::in_type;
               to_append->type = initial_token.value;
@@ -629,9 +669,11 @@ ast_types::global_scope lex_program(file_object input_file,
                     recursive_lex(itt, new_scope, parsing_modes::type,
                                   entry_bracket('(', ')'));  // var type lexing
                 if (scope.size() == 1) {
-                  dynamic_cast<ast_types::glbdef*>(to_append)->name = ast_types::string_t(look_ahead().value);
+                  dynamic_cast<ast_types::glbdef *>(to_append)->name =
+                      ast_types::string_t(look_ahead().value);
                 } else {
-                  dynamic_cast<ast_types::vardef*>(to_append)->name = ast_types::string_t(look_ahead().value);
+                  dynamic_cast<ast_types::vardef *>(to_append)->name =
+                      ast_types::string_t(look_ahead().value);
                 }
                 if (look_ahead().value == "=") {
                   new_scope = scope;
@@ -711,6 +753,87 @@ ast_types::global_scope lex_program(file_object input_file,
                 itt = recursive_lex(
                     itt, new_scope, parsing_modes::type,
                     entry_bracket('(', ')'));  // return type lexing
+              } else if (initial_token.value == "class") {
+                ast_types::class_n *to_append = new ast_types::class_n;
+                to_append->name = look_ahead().value;
+                int appended_index = append_ast_scope(scope, to_append);
+                std::vector<scope_element> new_scope = scope;
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::values);
+                look_ahead();
+                while (look_ahead().value != "}") {
+                  look_behind();
+                  ast_types::value *to_append_val = new ast_types::value;
+                  int appended_index_val =
+                      append_ast_scope(new_scope, to_append_val);
+                  std::vector<scope_element> new_scope_type = new_scope;
+                  new_scope_type.push_back((scope_element)appended_index_val);
+                  new_scope_type.push_back(scope_element::type);
+                  itt = recursive_lex(itt, new_scope_type, parsing_modes::type,
+                                      entry_bracket('(', ')'));
+                  to_append_val->name = ast_types::string_t(look_ahead().value);
+                  if (look_ahead().value == "=") {
+                    std::cout << "found value assignment in class" << std::endl;
+                    std::vector<scope_element> new_scope_val = new_scope;
+                    new_scope_val.push_back((scope_element)appended_index_val);
+                    new_scope_val.push_back(scope_element::args);
+                    itt = recursive_lex(itt, new_scope_val,
+                                        parsing_modes::arg_one,
+                                        entry_bracket('(', ')'));
+                  } else {
+                    look_behind();
+                  }
+                }
+              } else if (initial_token.value == "lambda") {
+                ast_types::fundef *to_append = new ast_types::fundef;
+                to_append->name = ast_types::string_t(
+                    " __αnonymous_lambda_at" +
+                    itt);  // the unicode character in the function is illegal
+                           // in the syntax, so we use it to make it anonymous
+                int appended_index =
+                    append_ast_scope({scope_element::global}, to_append);
+
+                look_ahead();
+                while (program_tokens[itt].value != "=>") {
+                  std::string arg_name = program_tokens[itt].value;
+                  if (look_ahead().value != ":") {
+                    error_out("expected ':' in function argument list",
+                              program_tokens[itt]);
+                  }
+                  std::vector<scope_element> new_scope = {
+                      scope_element::global};
+                  new_scope.push_back((scope_element)appended_index);
+                  new_scope.push_back(scope_element::argtype);
+                  ast_types::arg_with_type_t *arg_type_t =
+                      new ast_types::arg_with_type_t;
+                  arg_type_t->name = ast_types::string_t(arg_name);
+                  new_scope.push_back(
+                      (scope_element)append_ast_scope(new_scope, arg_type_t));
+                  new_scope.push_back(scope_element::type);
+                  itt = recursive_lex(itt, new_scope, parsing_modes::type,
+                                      entry_bracket('(', ')'));  // type lexing
+                  look_ahead();
+                }
+                std::vector<scope_element> new_scope = {scope_element::global};
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::return_type);
+                itt = recursive_lex(itt, new_scope, parsing_modes::type,
+                                    entry_bracket('(', ')'));
+
+                if (look_ahead().value != "{") {
+                  error_out("expected '{' in function definition",
+                            program_tokens[itt - 1]);
+                }
+                new_scope = scope;
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::body);
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
+                                    entry_bracket('{', '}'));  // body lexing
+
+                ast_types::varop *to_append_varop = new ast_types::varop;
+                to_append_varop->name = ast_types::string_t("funptr");
+                to_append_varop->var = to_append->name;
+                append_ast_scope(scope, to_append_varop);
               } else {
                 look_ahead();
                 if (program_tokens[itt].value == "(") {

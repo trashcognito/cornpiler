@@ -3,3 +3,4 @@ Split off the lower AST into its own folder, make every AST node inhabit its own
 Make inline assembly work
 Proper error handling
 Move translate function into a virtual function in AST nodes
+Add classes

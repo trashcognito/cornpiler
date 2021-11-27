@@ -1,0 +1,13 @@
+fun main => int64 {
+  class test_class {
+    int a
+    int b = 3
+    fun a:int64 => none return_a_plus_b = lambda a:int64 => none {
+      return(a + b)
+    }
+  }
+  var test_class c
+  # c.a = 1
+  # c.b = 2
+  # return(c.return_a())
+}
