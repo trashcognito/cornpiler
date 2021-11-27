@@ -1,8 +1,10 @@
-fun function_a => i5 {
+var int a = 100
+
+fun function_a => int {
     return(1)
 }
 
-fun main => none {
-    var i5 num = function_a()
-    println("$n".fmt(num))
+fun main => int {
+    var int num = function_a()
+    return(num)
 }

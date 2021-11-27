@@ -14,14 +14,16 @@ enum class scope_element : int {
   out_length = -10,
 };
 
-enum class token_type { string,
-                        identifier,
-                        number,
-                        decimal,
-                        bracket,
-                        semi,
-                        sep,
-                        sym };
+enum class token_type {
+  string,
+  identifier,
+  number,
+  decimal,
+  bracket,
+  semi,
+  sep,
+  sym
+};
 
 enum class act_type {
   error,
@@ -47,6 +49,14 @@ enum class act_type {
   outtype,
   global,
   scope,
+};
+
+enum class parsing_modes {
+  error,
+  statement,
+  argument,
+  arg_one,
+  type,
 };
 
 class entry_bracket {

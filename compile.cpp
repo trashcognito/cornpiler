@@ -5,19 +5,17 @@
 #include <iostream>
 #include <vector>
 
-std::string DEBUG_TOKEN_TYPES[] = {"str", "identifier", "number", "decimal", "bracket",
-                                   "semi", "sep", "sym"};
+std::string DEBUG_TOKEN_TYPES[] = {"str",     "identifier", "number", "decimal",
+                                   "bracket", "semi",       "sep",    "sym"};
 
 entry_bracket::entry_bracket(char f, char s) {
   first = f;
   second = s;
 }
 
-
 bool check_id_constraints(std::string id, char c) {
   bool retval = isalpha(c) || c == '_';
-  if (!id.empty())
-    retval |= isdigit(c);
+  if (!id.empty()) retval |= isdigit(c);
   return retval;
 }
 std::vector<token> tokenize_program(std::string program, int length,
@@ -89,8 +87,7 @@ std::vector<token> tokenize_program(std::string program, int length,
       error_show = " " + error_show;
     }
     logger->log(level, error_show);
-    if (_exit)
-      exit(-1);
+    if (_exit) exit(-1);
   };
 
   status.full_token = "{";
@@ -123,13 +120,13 @@ std::vector<token> tokenize_program(std::string program, int length,
     };
 
     if (status.comment) {
-      if (c == '\n')
-        status.comment = false;
+      if (c == '\n') status.comment = false;
       continue;
     }
 
     std::string old_full_token =
-        status.full_token;  // set old full token here to check for symbols later
+        status
+            .full_token;  // set old full token here to check for symbols later
 
     if (status.string.going) {
       if (status.string.escaping) {
@@ -251,9 +248,10 @@ ast_types::global_scope lex_program(file_object input_file,
                                     logger::logger *logger) {
   ast_types::global_scope globals;
 
-  std::function<int(int, std::vector<scope_element>, int, entry_bracket)>
+  std::function<int(int, std::vector<scope_element>, parsing_modes,
+                    entry_bracket)>
       recursive_lex = [&](int old_itt, std::vector<scope_element> scope,
-                          int parsing_mode,
+                          parsing_modes parsing_mode,
                           entry_bracket entr) {  // returns the new itt
         auto error_out = [&](std::string error_message, token tk,
                              logger::LOG_LEVEL level = logger::LOG_LEVEL::ERROR,
@@ -280,8 +278,7 @@ ast_types::global_scope lex_program(file_object input_file,
             error_show = " " + error_show;
           }
           logger->log(level, error_show);
-          if (_exit)
-            exit(-1);
+          if (_exit) exit(-1);
         };
 
         auto goto_ast_scope = [&](std::vector<scope_element> in_scope) {
@@ -301,8 +298,9 @@ ast_types::global_scope lex_program(file_object input_file,
             } else {
               switch ((scope_element)s) {
                 case scope_element::global:
-                  that_ast = &(
-                      (dynamic_cast<ast_types::global_scope *>(that_ast))->body);
+                  that_ast =
+                      &((dynamic_cast<ast_types::global_scope *>(that_ast))
+                            ->body);
 
                   logger->log(logger::LOG_LEVEL::DEBUG, "> global",
                               logger::SETTINGS::NONE);
@@ -359,23 +357,24 @@ ast_types::global_scope lex_program(file_object input_file,
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::argtype:
-                  that_ast =
-                      &((dynamic_cast<ast_types::with_args_with_type *>(that_ast))
-                            ->args);
+                  that_ast = &(
+                      (dynamic_cast<ast_types::with_args_with_type *>(that_ast))
+                          ->args);
 
                   logger->log(logger::LOG_LEVEL::DEBUG, "> argtype",
                               logger::SETTINGS::NONE);
                   break;
                 case scope_element::out_length:
-                  that_ast =
-                      &((dynamic_cast<ast_types::out_type *>(that_ast))->length);
+                  that_ast = &(
+                      (dynamic_cast<ast_types::out_type *>(that_ast))->length);
 
                   logger->log(logger::LOG_LEVEL::DEBUG, "> out_length",
                               logger::SETTINGS::NONE);
                 default:
 
-                  logger->log(logger::LOG_LEVEL::ERROR,
-                              "\nInvalid scope element: " + std::to_string((int)s));
+                  logger->log(
+                      logger::LOG_LEVEL::ERROR,
+                      "\nInvalid scope element: " + std::to_string((int)s));
                   exit(0);
               }
             }
@@ -442,13 +441,51 @@ ast_types::global_scope lex_program(file_object input_file,
           logger->log(logger::LOG_LEVEL::DEBUG,
                       "Token info: " + initial_token.value + "\t\t\t" +
                           DEBUG_TOKEN_TYPES[(int)initial_token.type]);
+
+          if (parsing_mode == parsing_modes::type) {
+            if (initial_token.value == "ptr" || initial_token.value == "arr" ||
+                initial_token.value == "unsigned") {
+              // outer type
+              ast_types::out_type *to_append = new ast_types::out_type;
+              to_append->name = initial_token.value;
+
+              int appended_index = append_ast_scope(scope, to_append);
+              if (initial_token.value == "arr") {
+                if (look_ahead().value != "[") {
+                  error_out("array type must be followed by [",
+                            program_tokens[itt]);
+                }
+                std::vector<scope_element> new_scope = scope;
+                new_scope.push_back((scope_element)appended_index);
+                new_scope.push_back(scope_element::out_length);
+                itt = recursive_lex(
+                    itt, new_scope, parsing_modes::type,
+                    entry_bracket('[', ']'));  // array length lexing
+              }
+
+              std::vector<scope_element> new_scope = scope;
+              new_scope.push_back((scope_element)appended_index);
+              new_scope.push_back(scope_element::type);
+
+              itt = recursive_lex(itt, new_scope, parsing_modes::type,
+                                  entry_bracket('(', ')'));  // type lexing
+            } else {
+              ast_types::in_type *to_append = new ast_types::in_type;
+              to_append->type = initial_token.value;
+              append_ast_scope(scope, to_append);
+            }
+            break;
+          }
+
           switch (initial_token.type) {
             case token_type::identifier: {
               if (initial_token.value == "for") {
-                ast_types::statement_with_body *to_append = new ast_types::statement_with_body;
+                ast_types::statement_with_body *to_append =
+                    new ast_types::statement_with_body;
 
                 ast_types::scope *to_append_scope = new ast_types::scope;
-                int appended_scope_id = append_ast_scope(scope, to_append_scope);
+                int appended_scope_id =
+                    append_ast_scope(scope, to_append_scope);
 
                 to_append->name = ast_types::string_t("while");
                 int appended_index = -1;
@@ -467,14 +504,16 @@ ast_types::global_scope lex_program(file_object input_file,
                     new_scope.push_back((scope_element)appended_index);
                     new_scope.push_back(scope_element::body);
                   }
-                  itt = recursive_lex(itt, new_scope, 1, entry_bracket('(', ')'));
+                  itt = recursive_lex(itt, new_scope, parsing_modes::argument,
+                                      entry_bracket('(', ')'));
                   if (incr_cnt == 0) {
                     appended_index = append_ast_scope(new_scope, to_append);
                   }
                   incr_cnt++;
                 }
                 if (incr_cnt != 3) {
-                  error_out("Invalid argument count in for loop", initial_token);
+                  error_out("Invalid argument count in for loop",
+                            initial_token);
                 }
                 look_ahead();
                 std::vector<scope_element> new_scope = scope;
@@ -482,7 +521,8 @@ ast_types::global_scope lex_program(file_object input_file,
                 new_scope.push_back(scope_element::body);
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
-                itt = recursive_lex(itt, new_scope, 0, entry_bracket('{', '}'));
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
+                                    entry_bracket('{', '}'));
               } else if (initial_token.value == "if") {
                 // double body statement
                 ast_types::statement_with_two_bodies *to_append =
@@ -495,14 +535,14 @@ ast_types::global_scope lex_program(file_object input_file,
                 new_scope.push_back(scope_element::args);
 
                 while (program_tokens[itt].value != ")") {
-                  itt = recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(itt, new_scope, parsing_modes::argument,
                                       entry_bracket('(', ')'));  // args lexing
                 }
 
                 new_scope = scope;
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
-                itt = recursive_lex(itt, new_scope, 0,
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
                                     entry_bracket('{', '}'));  // body lexing
 
                 if (look_ahead().value == "else") {
@@ -511,14 +551,14 @@ ast_types::global_scope lex_program(file_object input_file,
                     scope.push_back((scope_element)appended_index);
                     scope.push_back(scope_element::second_body);
                     itt = recursive_lex(
-                        --itt, new_scope, 0,
+                        --itt, new_scope, parsing_modes::statement,
                         entry_bracket('{', '}'));  // else if body lexing
                   } else {
                     new_scope = scope;
                     new_scope.push_back((scope_element)appended_index);
                     new_scope.push_back(scope_element::second_body);
                     itt = recursive_lex(
-                        --itt, new_scope, 0,
+                        --itt, new_scope, parsing_modes::statement,
                         entry_bracket('{', '}'));  // else body lexing
                   }
                 } else {
@@ -537,14 +577,14 @@ ast_types::global_scope lex_program(file_object input_file,
                 new_scope.push_back(scope_element::args);
 
                 while (program_tokens[itt].value != ")") {
-                  itt = recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(itt, new_scope, parsing_modes::argument,
                                       entry_bracket('(', ')'));  // args lexing
                 }
 
                 new_scope = scope;
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
-                itt = recursive_lex(itt, new_scope, 0,
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
                                     entry_bracket('{', '}'));  // body lexing
               } else if (initial_token.value == "return" ||
                          initial_token.value == "break" ||
@@ -559,13 +599,12 @@ ast_types::global_scope lex_program(file_object input_file,
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
-                  itt = recursive_lex(--itt, new_scope, 1,
+                  itt = recursive_lex(--itt, new_scope, parsing_modes::argument,
                                       entry_bracket('(', ')'));  // args lexing
                 } else {
                   --itt;
                 }
-              } else if (
-                  initial_token.value == "ref") {
+              } else if (initial_token.value == "ref") {
                 // varop
                 ast_types::varop *to_append = new ast_types::varop;
                 to_append->name = ast_types::string_t(initial_token.value);
@@ -573,82 +612,36 @@ ast_types::global_scope lex_program(file_object input_file,
                 append_ast_scope(scope, to_append);
               } else if (initial_token.value == "var") {
                 // vardef
-                ast_types::vardef *to_append = new ast_types::vardef;
+
+                AST *to_append;
+                //  = new ast_types::vardef;
+                if (scope.size() == 1) {
+                  to_append = new ast_types::glbdef;
+                } else {
+                  to_append = new ast_types::vardef;
+                }
+
                 std::vector<scope_element> new_scope = scope;
                 int appended_index = append_ast_scope(scope, to_append);
-                new_scope.push_back(
-                    (scope_element)appended_index);
+                new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::type);
-                itt = recursive_lex(itt, new_scope, 4,
-                                    entry_bracket('(', ')'));  // var type lexing
-                to_append->name = ast_types::string_t(look_ahead().value);
+                itt =
+                    recursive_lex(itt, new_scope, parsing_modes::type,
+                                  entry_bracket('(', ')'));  // var type lexing
+                if (scope.size() == 1) {
+                  dynamic_cast<ast_types::glbdef*>(to_append)->name = ast_types::string_t(look_ahead().value);
+                } else {
+                  dynamic_cast<ast_types::vardef*>(to_append)->name = ast_types::string_t(look_ahead().value);
+                }
                 if (look_ahead().value == "=") {
                   new_scope = scope;
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
-                  itt = recursive_lex(itt, new_scope, 2, entry_bracket('(', ')'));
+                  itt = recursive_lex(itt, new_scope, parsing_modes::arg_one,
+                                      entry_bracket('(', ')'));
                 } else {
                   --itt;
                 }
-              } else if (initial_token.value ==
-                         "glvar") {  // TODO: autodetect glvar and deprecate it
-                // gldef
-                ast_types::glbdef *to_append = new ast_types::glbdef;
-                std::vector<scope_element> new_scope = scope;
-                new_scope.push_back(
-                    (scope_element)append_ast_scope(scope, to_append));
-                new_scope.push_back(scope_element::type);
-                itt = recursive_lex(
-                    itt, new_scope, 4,
-                    entry_bracket('(', ')'));  // var type lexing // I MAY BE WRONG
-                                               // HERE, THIS MIGHT NEED TO BE 3
-                to_append->name = ast_types::string_t(look_ahead().value);
-                append_ast_scope(scope, to_append);
-              } else if (initial_token.value == "ptr" ||
-                         initial_token.value == "arr" ||
-                         initial_token.value == "unsigned") {
-                // outer type
-                ast_types::out_type *to_append = new ast_types::out_type;
-                to_append->name =
-                    initial_token
-                        .value;  // wait this works lmao so let me get this
-                                 // straight: it can convert a type to a class with
-                                 // no default constructor, but it can't convert an
-                                 // int enum to a fucking int. c'mon. cpp amirite
-
-                int appended_index = append_ast_scope(scope, to_append);
-                if (initial_token.value == "arr") {
-                  if (look_ahead().value != "[") {
-                    error_out("array type must be followed by [",
-                              program_tokens[itt]);
-                  }
-                  std::vector<scope_element> new_scope = scope;
-                  new_scope.push_back((scope_element)appended_index);
-                  new_scope.push_back(scope_element::out_length);
-                  itt = recursive_lex(
-                      itt, new_scope, 4,
-                      entry_bracket('[', ']'));  // array length lexing
-                }
-
-                std::vector<scope_element> new_scope = scope;
-                new_scope.push_back((scope_element)appended_index);
-                new_scope.push_back(scope_element::type);
-
-                itt = recursive_lex(itt, new_scope, 4,
-                                    entry_bracket('(', ')'));  // type lexing
-              } else if (initial_token.value == "str" ||
-                         initial_token.value == "none" ||
-                         initial_token.value == "bool" ||
-                         initial_token.value == "nibble" ||
-                         initial_token.value == "byte" ||
-                         initial_token.value == "word" ||
-                         initial_token.value == "int" ||
-                         initial_token.value == "int64" ||
-                         initial_token.value == "int128" ||
-                         initial_token.value == "float") {
-                ast_types::in_type *to_append = new ast_types::in_type;
-                to_append->type = initial_token.value;
-                append_ast_scope(scope, to_append);
               } else if (initial_token.value == "fun") {
                 // have FUN! jk function
                 ast_types::fundef *to_append = new ast_types::fundef;
@@ -671,16 +664,16 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, arg_type_t));
                   new_scope.push_back(scope_element::type);
-                  itt = recursive_lex(itt, new_scope, 4,
+                  itt = recursive_lex(itt, new_scope, parsing_modes::type,
                                       entry_bracket('(', ')'));  // type lexing
                   look_ahead();
                 }
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::return_type);
-                itt =
-                    recursive_lex(itt, new_scope, 4,
-                                  entry_bracket('(', ')'));  // return type lexing
+                itt = recursive_lex(
+                    itt, new_scope, parsing_modes::type,
+                    entry_bracket('(', ')'));  // return type lexing
 
                 if (look_ahead().value != "{") {
                   error_out("expected '{' in function definition",
@@ -689,7 +682,7 @@ ast_types::global_scope lex_program(file_object input_file,
                 new_scope = scope;
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::body);
-                itt = recursive_lex(itt, new_scope, 0,
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
                                     entry_bracket('{', '}'));  // body lexing
               } else if (initial_token.value ==
                          "ext") {  // TODO: autodetect and deprecate
@@ -707,16 +700,17 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, arg_type_t));
                   new_scope.push_back(scope_element::type);
-                  int tmp_itt = recursive_lex(itt, new_scope, 4,
-                                              entry_bracket('(', ')'));  // type lexing
+                  int tmp_itt =
+                      recursive_lex(itt, new_scope, parsing_modes::type,
+                                    entry_bracket('(', ')'));  // type lexing
                   itt = tmp_itt;
                 }
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)appended_index);
                 new_scope.push_back(scope_element::return_type);
-                itt =
-                    recursive_lex(itt, new_scope, 4,
-                                  entry_bracket('(', ')'));  // return type lexing
+                itt = recursive_lex(
+                    itt, new_scope, parsing_modes::type,
+                    entry_bracket('(', ')'));  // return type lexing
               } else {
                 look_ahead();
                 if (program_tokens[itt].value == "(") {
@@ -735,15 +729,20 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back((scope_element)appended_index);
                   new_scope.push_back(scope_element::args);
                   while (program_tokens[itt].value != ")") {
-                    itt = recursive_lex(itt, new_scope, 1,
-                                        entry_bracket('(', ')'));  // args lexing
+                    itt =
+                        recursive_lex(itt, new_scope, parsing_modes::argument,
+                                      entry_bracket('(', ')'));  // args lexing
                   }
                 } else {
                   // this should be a variable
                   // since we have already incremented itt, we can check whether
                   // it is a assignment or a reference right away
                   if (program_tokens[itt].value == "=" ||
-                      (program_tokens[itt].value[1] == '=' && program_tokens[itt].value[0] != '=' && program_tokens[itt].value[0] != '!' && program_tokens[itt].value[0] != '<' && program_tokens[itt].value[0] != '>')) {
+                      (program_tokens[itt].value[1] == '=' &&
+                       program_tokens[itt].value[0] != '=' &&
+                       program_tokens[itt].value[0] != '!' &&
+                       program_tokens[itt].value[0] != '<' &&
+                       program_tokens[itt].value[0] != '>')) {
                     // assignment
                     token operation = program_tokens[itt];
                     token var_name = program_tokens[itt - 1];
@@ -755,8 +754,9 @@ ast_types::global_scope lex_program(file_object input_file,
                       new_scope.push_back(
                           (scope_element)append_ast_scope(scope, to_append));
                       new_scope.push_back(scope_element::args);
-                      itt = recursive_lex(itt, new_scope, 2,
-                                          entry_bracket('(', ')'));  // args lexing
+                      itt = recursive_lex(
+                          itt, new_scope, parsing_modes::arg_one,
+                          entry_bracket('(', ')'));  // args lexing
                     } else {
                       // +=, -=, *=, /=, %=, &=, ^=, |=
                       ast_types::varset *to_append = new ast_types::varset;
@@ -773,8 +773,9 @@ ast_types::global_scope lex_program(file_object input_file,
                       ast_types::getvar *to_append2 = new ast_types::getvar;
                       to_append2->name = var_name.value;
                       append_ast_scope(new_scope, to_append2);
-                      itt = recursive_lex(itt, new_scope, 2,
-                                          entry_bracket('(', ')'));  // args lexing
+                      itt = recursive_lex(
+                          itt, new_scope, parsing_modes::arg_one,
+                          entry_bracket('(', ')'));  // args lexing
                     }
                   } else {
                     // reference
@@ -796,7 +797,8 @@ ast_types::global_scope lex_program(file_object input_file,
             }
             case token_type::decimal: {
               // decimal const
-              ast_types::const_decimal *to_append = new ast_types::const_decimal;
+              ast_types::const_decimal *to_append =
+                  new ast_types::const_decimal;
               to_append->value = stod(program_tokens[itt].value);
               append_ast_scope(scope, to_append);
               break;
@@ -817,7 +819,7 @@ ast_types::global_scope lex_program(file_object input_file,
                   new_scope.push_back(
                       (scope_element)append_ast_scope(new_scope, to_append));
                   new_scope.push_back(scope_element::args);
-                  itt = recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(itt, new_scope, parsing_modes::argument,
                                       entry_bracket('(', ')'));  // args lexing
                   continue;
                 }
@@ -830,8 +832,8 @@ ast_types::global_scope lex_program(file_object input_file,
                       (scope_element)append_ast_scope(new_scope, to_append));
                   new_scope.push_back(scope_element::args);
                   while (program_tokens[itt].value != "]") {
-                    itt =
-                        recursive_lex(itt, new_scope, 1, entry_bracket('(', ')'));
+                    itt = recursive_lex(itt, new_scope, parsing_modes::argument,
+                                        entry_bracket('(', ')'));
                   }
                 } else {
                   // indexing an array
@@ -847,7 +849,7 @@ ast_types::global_scope lex_program(file_object input_file,
                       (scope_element)append_ast_scope(scope, to_append));
                   new_scope.push_back(scope_element::arr_index);
 
-                  itt = recursive_lex(itt, new_scope, 1,
+                  itt = recursive_lex(itt, new_scope, parsing_modes::argument,
                                       entry_bracket('(', ')'));  // args lexing
                 }
               } else if (entr.second == program_tokens[itt].value[0]) {
@@ -868,7 +870,8 @@ ast_types::global_scope lex_program(file_object input_file,
                     (scope_element)append_ast_scope(new_scope, to_append));
                 new_scope.push_back(scope_element::body);
 
-                itt = recursive_lex(itt, new_scope, 0, entry_bracket('{', '}'));
+                itt = recursive_lex(itt, new_scope, parsing_modes::statement,
+                                    entry_bracket('{', '}'));
               }
               break;
             }
@@ -876,8 +879,8 @@ ast_types::global_scope lex_program(file_object input_file,
               // symbols
               if (check_if_operation(initial_token)) {
                 if (initial_token.value == "-" &&
-                    dynamic_cast<ast_body *>(get_ast_scope(scope))->body.size() ==
-                        0) {
+                    dynamic_cast<ast_body *>(get_ast_scope(scope))
+                            ->body.size() == 0) {
                   // unary minus
                   ast_types::statement *to_append = new ast_types::statement;
                   to_append->name = ast_types::string_t("neg");
@@ -886,7 +889,9 @@ ast_types::global_scope lex_program(file_object input_file,
                       (scope_element)append_ast_scope(scope, to_append));
                   new_scope.push_back(scope_element::args);
                   itt = recursive_lex(itt, new_scope,
-                                      parsing_mode == 0 ? 1 : parsing_mode,
+                                      parsing_mode == parsing_modes::statement
+                                          ? parsing_modes::argument
+                                          : parsing_mode,
                                       entry_bracket('(', ')'));  // args lexing
                 } else if (initial_token.value == "!") {
                   ast_types::statement *to_append = new ast_types::statement;
@@ -896,7 +901,9 @@ ast_types::global_scope lex_program(file_object input_file,
                       (scope_element)append_ast_scope(scope, to_append));
                   new_scope.push_back(scope_element::args);
                   itt = recursive_lex(itt, new_scope,
-                                      parsing_mode == 0 ? 1 : parsing_mode,
+                                      parsing_mode == parsing_modes::statement
+                                          ? parsing_modes::argument
+                                          : parsing_mode,
                                       entry_bracket('(', ')'));  // args lexing
                 } else {
                   // operation
@@ -913,7 +920,9 @@ ast_types::global_scope lex_program(file_object input_file,
                       (scope_element)append_ast_scope(scope, to_append));
                   new_scope.push_back(scope_element::args);
                   itt = recursive_lex(itt, new_scope,
-                                      parsing_mode == 0 ? 1 : parsing_mode,
+                                      parsing_mode == parsing_modes::statement
+                                          ? parsing_modes::argument
+                                          : parsing_mode,
                                       entry_bracket('(', ')'));  // args lexing
                 }
               }
@@ -926,9 +935,8 @@ ast_types::global_scope lex_program(file_object input_file,
             case token_type::semi:
               break;
           }
-          if (!try_continue)
-            break;
-          if (parsing_mode != 0) {
+          if (!try_continue) break;
+          if (parsing_mode != parsing_modes::statement) {
             if (program_tokens[itt].value == "," ||
                 program_tokens[itt].value == "." ||
                 program_tokens[itt].value == ")") {  // "." could be unnecessary
@@ -936,25 +944,20 @@ ast_types::global_scope lex_program(file_object input_file,
             }
           }
 
-          if (parsing_mode == 2) {
+          if (parsing_mode == parsing_modes::arg_one) {
             look_ahead();
             itt -= 1;  // check for end of file
             if ((!check_if_operation(program_tokens[itt])) &&
                 (!check_if_operation(program_tokens[itt + 1]))) {
               break;
             }
-          } else if (parsing_mode == 3) {
-            if (program_tokens[itt].value == "=") {
-              break;
-            }
-          } else if (parsing_mode == 4) {
-            break;
           }
         }
         return itt;
       };
 
-  recursive_lex(-1, {scope_element::global}, 0, entry_bracket('{', '}'));
+  recursive_lex(-1, {scope_element::global}, parsing_modes::statement,
+                entry_bracket('{', '}'));
 
   return globals;
 }
