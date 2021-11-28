@@ -24,6 +24,7 @@
 #include "pre_ast/with/second_body.hpp"
 #include "pre_ast/with/type.hpp"
 #include "pre_ast/with/values.hpp"
+#include "pre_ast/with/second_args.hpp"
 
 #include "pre_ast/nodes/arrget.hpp"
 #include "pre_ast/nodes/arrset.hpp"
@@ -50,6 +51,8 @@
 #include "pre_ast/nodes/class.hpp"
 #include "pre_ast/nodes/value.hpp"
 #include "pre_ast/nodes/fun_type.hpp"
+#include "pre_ast/nodes/classget.hpp"
+#include "pre_ast/nodes/ptrset.hpp"
 
 bool check_id_constraints(std::string id, char c);
 

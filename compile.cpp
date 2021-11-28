@@ -378,6 +378,14 @@ ast_types::global_scope lex_program(file_object input_file,
                   logger->log(logger::LOG_LEVEL::DEBUG, " > values",
                               logger::SETTINGS::NONE);
                   break;
+                case scope_element::second_args:
+                  that_ast =
+                      &((dynamic_cast<ast_types::with_second_args *>(that_ast))
+                            ->second_args);
+
+                  logger->log(logger::LOG_LEVEL::DEBUG, " > second_args",
+                              logger::SETTINGS::NONE);
+                  break;
                 default:
 
                   logger->log(
@@ -769,19 +777,22 @@ ast_types::global_scope lex_program(file_object input_file,
 
                     int appended_index_val =
                         append_ast_scope(new_scope, to_append_val);
-                    
-                    std::vector <scope_element> new_scope_fun_type = new_scope;
-                    new_scope_fun_type.push_back((scope_element)appended_index_val);
+
+                    std::vector<scope_element> new_scope_fun_type = new_scope;
+                    new_scope_fun_type.push_back(
+                        (scope_element)appended_index_val);
                     new_scope_fun_type.push_back(scope_element::type);
 
-                    int appended_index_fun_type =
-                        append_ast_scope(new_scope_fun_type, to_append_fun_type);
+                    int appended_index_fun_type = append_ast_scope(
+                        new_scope_fun_type, to_append_fun_type);
 
-                    to_append_fun->name = ast_types::string_t("__anonymous_lambda_at_" + std::to_string(itt));
+                    to_append_fun->name = ast_types::string_t(
+                        "__anonymous_lambda_at_" + std::to_string(itt));
                     to_append_val->name = look_ahead().value;
 
                     std::vector<scope_element> new_scope_val_args = new_scope;
-                    new_scope_val_args.push_back((scope_element)appended_index_val);
+                    new_scope_val_args.push_back(
+                        (scope_element)appended_index_val);
                     new_scope_val_args.push_back(scope_element::args);
 
                     ast_types::varop *to_append_funptr = new ast_types::varop;
@@ -823,7 +834,8 @@ ast_types::global_scope lex_program(file_object input_file,
                                   program_tokens[itt]);
                       }
                       std::vector<scope_element> new_scope = new_scope_fun_type;
-                      new_scope.push_back((scope_element)appended_index_fun_type);
+                      new_scope.push_back(
+                          (scope_element)appended_index_fun_type);
                       new_scope.push_back(scope_element::argtype);
                       ast_types::arg_with_type_t *arg_type_t =
                           new ast_types::arg_with_type_t;
@@ -875,7 +887,6 @@ ast_types::global_scope lex_program(file_object input_file,
                                       entry_bracket('(', ')'));
                   to_append_val->name = ast_types::string_t(look_ahead().value);
                   if (look_ahead().value == "=") {
-                    std::cout << "found value assignment in class" << std::endl;
                     std::vector<scope_element> new_scope_val = new_scope;
                     new_scope_val.push_back((scope_element)appended_index_val);
                     new_scope_val.push_back(scope_element::args);
@@ -1151,6 +1162,104 @@ ast_types::global_scope lex_program(file_object input_file,
                                           : parsing_mode,
                                       entry_bracket('(', ')'));  // args lexing
                 }
+              } else if (program_tokens[itt].value == "=" ||
+                         (program_tokens[itt].value[1] == '=' &&
+                          program_tokens[itt].value[0] != '=' &&
+                          program_tokens[itt].value[0] != '!' &&
+                          program_tokens[itt].value[0] != '<' &&
+                          program_tokens[itt].value[0] != '>')) {
+                // assignment to a dereferenced pointer
+
+                token operation = program_tokens[itt];
+                AST *old_stat_place =
+                    (AST *)(dynamic_cast<ast_body *>(get_ast_scope(scope))
+                                ->body.back());
+                (dynamic_cast<ast_body *>(get_ast_scope(scope)))
+                    ->body
+                    .pop_back();  // this is the pointer to be dereferenced
+                if (operation.value == "=") {
+                  // simple assignment
+                  ast_types::ptrset *to_append = new ast_types::ptrset;
+                  std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back(
+                      (scope_element)append_ast_scope(scope, to_append));
+                  new_scope.push_back(scope_element::second_args);
+                  append_ast_scope(new_scope, old_stat_place);
+                  new_scope.pop_back();
+                  new_scope.push_back(scope_element::args);
+                  itt = recursive_lex(itt, new_scope, parsing_modes::arg_one,
+                                      entry_bracket('(', ')'));  // args lexing
+                } else {
+                  ast_types::ptrset *to_append = new ast_types::ptrset;
+                  int appended_index = append_ast_scope(scope, to_append);
+                  std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back((scope_element)appended_index);
+                  new_scope.push_back(scope_element::second_args);
+                  append_ast_scope(new_scope, old_stat_place);
+
+                  new_scope = scope;
+                  new_scope.push_back((scope_element)appended_index);
+                  new_scope.push_back(scope_element::args);
+
+                  ast_types::oper *opr = new ast_types::oper;
+                  opr->op = ast_types::string_t(operation.value[0]);
+                  new_scope.push_back(
+                      (scope_element)append_ast_scope(new_scope, opr));
+                  new_scope.push_back(scope_element::args);
+
+                  ast_types::statement *deref_to_append =
+                      new ast_types::statement;
+                  deref_to_append->name = ast_types::string_t("deref");
+                  deref_to_append->args.body.push_back(old_stat_place);
+                  append_ast_scope(new_scope, deref_to_append);
+                  // ast_types::getvar *to_append2 = new ast_types::getvar;
+                  // to_append2->name = var_name.value;
+                  // append_ast_scope(new_scope, to_append2);
+                  itt = recursive_lex(itt, new_scope, parsing_modes::arg_one,
+                                      entry_bracket('(', ')'));  // args lexing
+                }
+              } else if (initial_token.value == ".") {
+                std::cout << "dot operations" << std::endl;
+                // classget returns the pointer to the member inside a class
+                // if we are getting the value, we need to dereference it
+                // if we are setting the value, we need to dereference it and
+                // then set the value
+
+                ast_types::classget *to_append = new ast_types::classget;
+                std::vector<scope_element> new_scope = scope;
+
+                AST *old_stat_place =
+                    (AST *)(dynamic_cast<ast_body *>(get_ast_scope(scope))
+                                ->body.back());
+                (dynamic_cast<ast_body *>(get_ast_scope(scope)))
+                    ->body.pop_back();
+                new_scope.push_back(
+                    (scope_element)append_ast_scope(scope, to_append));
+                new_scope.push_back(scope_element::args);
+
+                append_ast_scope(new_scope, old_stat_place);
+                to_append->var = look_ahead().value;
+                look_ahead();
+                if (!(program_tokens[itt].value == "=" ||
+                      (program_tokens[itt].value[1] == '=' &&
+                       program_tokens[itt].value[0] != '=' &&
+                       program_tokens[itt].value[0] != '!' &&
+                       program_tokens[itt].value[0] != '<' &&
+                       program_tokens[itt].value[0] != '>'))) {
+                  // we are getting the value, in which case we need to
+                  // dereference the pointer because classget returns a pointer
+                  ast_types::statement *deref_to_append =
+                      new ast_types::statement;
+                  deref_to_append->name = ast_types::string_t("deref");
+                  AST *old_stat_place =
+                      (AST *)(dynamic_cast<ast_body *>(get_ast_scope(scope))
+                                  ->body.back());
+                  (dynamic_cast<ast_body *>(get_ast_scope(scope)))
+                      ->body.pop_back();
+                  deref_to_append->args.body.push_back(old_stat_place);
+                  append_ast_scope(scope, deref_to_append);
+                }
+              look_behind();
               }
               break;
             }

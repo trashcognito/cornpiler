@@ -13,6 +13,7 @@ enum class scope_element : int {
   argtype = -9,
   out_length = -10,
   values = -11,
+  second_args = -12,
 };
 
 enum class token_type {
@@ -53,6 +54,8 @@ enum class act_type {
   class_n,
   value,
   fun_type,
+  classget,
+  ptrset,
 };
 
 enum class parsing_modes {
