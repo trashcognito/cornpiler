@@ -56,6 +56,7 @@ enum class act_type {
   fun_type,
   classget,
   ptrset,
+  callptr,
 };
 
 enum class parsing_modes {

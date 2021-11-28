@@ -805,6 +805,19 @@ ast_types::global_scope lex_program(file_object input_file,
                         {scope_element::global}, to_append_fun);
                     look_ahead();
                     int old_itt = itt;
+
+                    ast_types::arg_with_type_t *this_arg_type_t =
+                        new ast_types::arg_with_type_t;
+                    this_arg_type_t->name = ast_types::string_t("this");
+                    ast_types::out_type *this_out_type =
+                        new ast_types::out_type;
+                    this_out_type->name = ast_types::string_t("ptr");
+                    ast_types::in_type *this_in_type = new ast_types::in_type;
+                    this_in_type->type = to_append->name;
+                    this_out_type->type.body.push_back(this_in_type);
+                    this_arg_type_t->type.body.push_back(this_out_type);
+                    to_append_fun->args.body.push_back(this_arg_type_t);
+
                     while (program_tokens[itt].value != "=>") {
                       std::string arg_name = program_tokens[itt].value;
                       if (look_ahead().value != ":") {
@@ -827,6 +840,7 @@ ast_types::global_scope lex_program(file_object input_file,
                       look_ahead();
                     }
                     itt = old_itt;
+                    to_append_fun_type->args.body.push_back(this_arg_type_t);
                     while (program_tokens[itt].value != "=>") {
                       std::string arg_name = program_tokens[itt].value;
                       if (look_ahead().value != ":") {
@@ -1240,12 +1254,12 @@ ast_types::global_scope lex_program(file_object input_file,
                 append_ast_scope(new_scope, old_stat_place);
                 to_append->var = look_ahead().value;
                 look_ahead();
-                if (!(program_tokens[itt].value == "=" ||
+                if ((!(program_tokens[itt].value == "=" ||
                       (program_tokens[itt].value[1] == '=' &&
                        program_tokens[itt].value[0] != '=' &&
                        program_tokens[itt].value[0] != '!' &&
                        program_tokens[itt].value[0] != '<' &&
-                       program_tokens[itt].value[0] != '>'))) {
+                       program_tokens[itt].value[0] != '>'))) && program_tokens[itt].value != "(") {
                   // we are getting the value, in which case we need to
                   // dereference the pointer because classget returns a pointer
                   ast_types::statement *deref_to_append =
@@ -1258,8 +1272,28 @@ ast_types::global_scope lex_program(file_object input_file,
                       ->body.pop_back();
                   deref_to_append->args.body.push_back(old_stat_place);
                   append_ast_scope(scope, deref_to_append);
+                } 
+                if (program_tokens[itt].value == "(") {
+                  // function call to a member function
+                  ast_types::callptr *to_append_call = new ast_types::callptr;
+                  AST *old_stat_place =
+                      (AST *)(dynamic_cast<ast_body *>(get_ast_scope(scope))
+                                  ->body.back());
+                  (dynamic_cast<ast_body *>(get_ast_scope(scope)))
+                      ->body.pop_back();
+                  to_append_call->second_args.body.push_back(old_stat_place);
+                  std::vector<scope_element> new_scope = scope;
+                  new_scope.push_back(
+                      (scope_element)append_ast_scope(scope, to_append_call));
+                  new_scope.push_back(scope_element::args);
+                  to_append_call->args.body.push_back(old_stat_place);
+                  while (program_tokens[itt].value != ")") {
+                    itt =
+                        recursive_lex(itt, new_scope, parsing_modes::argument,
+                                      entry_bracket('(', ')'));  // args lexing
+                  }
                 }
-              look_behind();
+                look_behind();
               }
               break;
             }

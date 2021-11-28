@@ -53,6 +53,7 @@
 #include "pre_ast/nodes/fun_type.hpp"
 #include "pre_ast/nodes/classget.hpp"
 #include "pre_ast/nodes/ptrset.hpp"
+#include "pre_ast/nodes/callptr.hpp"
 
 bool check_id_constraints(std::string id, char c);
 
