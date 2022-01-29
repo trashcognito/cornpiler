@@ -1,12 +1,12 @@
 #include "ast.hpp"
 #include "compile.hpp"
 
-std::vector<ast::GlobalEntry *>
-translate_program(ast_types::global_scope program, logger::logger *logger) {
+std::vector<ast::GlobalEntry *> translate_program(
+    ast_types::global_scope program, logger::logger *logger) {
   std::vector<ast::GlobalEntry *> global_entries;
 
   auto goto_ast_scope = [&](std::vector<scope_element> in_scope) {
-    logger->log(logger::LOG_LEVEL::DEBUG, "Reaching into ",
+    logger->log(logger::LOG_LEVEL::DEBUG, "Reaching into",
                 logger::SETTINGS::TYPE);
     AST *that_ast = &(program);
     int scope_i = 0;
@@ -17,7 +17,7 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
         that_ast = _temp_inhere[(int)s];
 
         logger->log(logger::LOG_LEVEL::DEBUG,
-                    "> [" + std::to_string((int)s) + "] ",
+                    " > [" + std::to_string((int)s) + "]",
                     logger::SETTINGS::NONE);
       } else {
         switch ((scope_element)s) {
@@ -25,65 +25,78 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
             that_ast =
                 &((dynamic_cast<ast_types::global_scope *>(that_ast))->body);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> global",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > global",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::args:
-            that_ast = &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
+            that_ast =
+                &((dynamic_cast<ast_types::with_args *>(that_ast))->args);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> args",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > args",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::body:
-            that_ast = &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
+            that_ast =
+                &((dynamic_cast<ast_types::with_body *>(that_ast))->body);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> body",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > body",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::second_body:
             that_ast = &((dynamic_cast<ast_types::with_second_body *>(that_ast))
                              ->second_body);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> second_body",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > second_body",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::type:
-            that_ast = &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
+            that_ast =
+                &((dynamic_cast<ast_types::with_type *>(that_ast))->type);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> type",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > type",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::return_type:
             that_ast = &((dynamic_cast<ast_types::with_return_type *>(that_ast))
                              ->return_type);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> return_type",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > return_type",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::arr_index:
             that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->index);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> arr_index",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > arr_index",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::arr_array:
             that_ast = &((dynamic_cast<ast_types::arrget *>(that_ast))->array);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> arr_array",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > arr_array",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::argtype:
-            that_ast = &(
-                (dynamic_cast<ast_types::with_args_with_type *>(that_ast))->args);
+            that_ast =
+                &((dynamic_cast<ast_types::with_args_with_type *>(that_ast))
+                      ->args);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> argtype",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > argtype",
                         logger::SETTINGS::NONE);
             break;
           case scope_element::out_length:
-            that_ast = &((dynamic_cast<ast_types::out_type *>(that_ast))->length);
+            that_ast =
+                &((dynamic_cast<ast_types::out_type *>(that_ast))->length);
 
-            logger->log(logger::LOG_LEVEL::DEBUG, "> out_length",
+            logger->log(logger::LOG_LEVEL::DEBUG, " > out_length",
                         logger::SETTINGS::NONE);
+            break;
+          case scope_element::values:
+            that_ast =
+                &((dynamic_cast<ast_types::with_values *>(that_ast))->values);
+
+            logger->log(logger::LOG_LEVEL::DEBUG, " > values",
+                        logger::SETTINGS::NONE);
+            break;
           default:
 
             logger->log(logger::LOG_LEVEL::ERROR, "\nInvalid scope element");
@@ -127,8 +140,9 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               return (ast::Type *)new ast::VoidType();
             } else if (dynamic_cast<ast_types::in_type *>(current_scope)
                            ->type.value == "str") {
-              logger->log(logger::LOG_LEVEL::WARNING,
-                          "String type will be implemented in the standard library");
+              logger->log(
+                  logger::LOG_LEVEL::WARNING,
+                  "String type will be implemented in the standard library");
             } else if (dynamic_cast<ast_types::in_type *>(current_scope)
                            ->type.value == "float") {
               logger->log(logger::LOG_LEVEL::WARNING,
@@ -141,8 +155,8 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
             std::vector<scope_element> new_scope = scope;
             new_scope.push_back((scope_element)0);
             new_scope.push_back(scope_element::type);
-            if (dynamic_cast<ast_types::out_type *>(current_scope)->name.value ==
-                "ptr") {
+            if (dynamic_cast<ast_types::out_type *>(current_scope)
+                    ->name.value == "ptr") {
               return (ast::Type *)new ast::PointerType(
                   translate_data_types(new_scope));
             } else if (dynamic_cast<ast_types::out_type *>(current_scope)
@@ -198,10 +212,11 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                   std::vector<scope_element> new_scope = scope;
                   new_scope.push_back((scope_element)i);
                   new_scope.push_back(scope_element::args);
-                  ast::ValueArray temporary_body = recursive_translate_body(new_scope);
+                  ast::ValueArray temporary_body =
+                      recursive_translate_body(new_scope);
 
-                  args.push_back((ast::Value *)new ast::ReturnVal(
-                      temporary_body[0]));
+                  args.push_back(
+                      (ast::Value *)new ast::ReturnVal(temporary_body[0]));
                 }
               } else if (dynamic_cast<ast_types::statement *>(e)->name.value ==
                          "deref") {
@@ -210,25 +225,25 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value *)new ast::Deref(
                     recursive_translate_body(new_scope)[0]));
-              } else if (dynamic_cast<ast_types::statement *>(e)->name.value == "neg") {
+              } else if (dynamic_cast<ast_types::statement *>(e)->name.value ==
+                         "neg") {
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)i);
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value *)new ast::UnaryOp(
-                    ast::UOps::NEG,
-                    recursive_translate_body(new_scope)[0]));
-              } else if (dynamic_cast<ast_types::statement *>(e)->name.value == "not") {
+                    ast::UOps::NEG, recursive_translate_body(new_scope)[0]));
+              } else if (dynamic_cast<ast_types::statement *>(e)->name.value ==
+                         "not") {
                 std::vector<scope_element> new_scope = scope;
                 new_scope.push_back((scope_element)i);
                 new_scope.push_back(scope_element::args);
                 args.push_back((ast::Value *)new ast::UnaryOp(
-                    ast::UOps::NOT,
-                    recursive_translate_body(new_scope)[0]));
+                    ast::UOps::NOT, recursive_translate_body(new_scope)[0]));
               }
               break;
             case act_type::statement_with_body:
-              if (dynamic_cast<ast_types::statement_with_body *>(e)->name.value ==
-                  "while") {
+              if (dynamic_cast<ast_types::statement_with_body *>(e)
+                      ->name.value == "while") {
                 std::vector<scope_element> new_scope_args = scope;
                 new_scope_args.push_back((scope_element)i);
                 new_scope_args.push_back(scope_element::args);
@@ -288,7 +303,8 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               new_scope = scope;
               new_scope.push_back((scope_element)i);
               new_scope.push_back(scope_element::args);
-              if (dynamic_cast<ast_body *>(goto_ast_scope(new_scope))->body.size() > 0) {
+              if (dynamic_cast<ast_body *>(goto_ast_scope(new_scope))
+                      ->body.size() > 0) {
                 args.push_back((ast::Value *)new ast::Varset(
                     dynamic_cast<ast_types::vardef *>(e)->name.value,
                     recursive_translate_body(new_scope)[0]));
@@ -332,9 +348,9 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               new_scope.push_back(scope_element::args);
               args.push_back((ast::Value *)new ast::Operand(
                   recursive_translate_body(new_scope)[0],
-                  recursive_translate_body(new_scope)[1],
-                  [&] {
-                    std::string op = (dynamic_cast<ast_types::oper *>(e))->op.value;
+                  recursive_translate_body(new_scope)[1], [&] {
+                    std::string op =
+                        (dynamic_cast<ast_types::oper *>(e))->op.value;
                     if (op == "+") return ast::OperandType::ADD;
                     if (op == "-") return ast::OperandType::SUB;
                     if (op == "*") return ast::OperandType::MUL;
@@ -361,10 +377,16 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
               std::vector<scope_element> new_scope = scope;
               new_scope.push_back((scope_element)i);
               new_scope.push_back(scope_element::body);
-              args.push_back(new ast::Body(
-                  recursive_translate_body(new_scope)));
+              args.push_back(
+                  new ast::Body(recursive_translate_body(new_scope)));
               break;
             }
+            case act_type::class_n:
+              break;
+            case act_type::value:
+              break;
+            case act_type::fun_type:
+              break;
             default:
               throw std::runtime_error("Unknown action type");
               break;
@@ -395,13 +417,13 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
                                                       scope_element::body})),
               [&] {
                 std::vector<std::string> args;
-                for (auto &a :
-                     dynamic_cast<ast_body *>(
-                         goto_ast_scope({scope_element::global, (scope_element)i,
-                                         scope_element::argtype}))
-                         ->body) {
-                  args.push_back(
-                      dynamic_cast<ast_types::arg_with_type_t *>(a)->name.value);
+                for (auto &a : dynamic_cast<ast_body *>(
+                                   goto_ast_scope({scope_element::global,
+                                                   (scope_element)i,
+                                                   scope_element::argtype}))
+                                   ->body) {
+                  args.push_back(dynamic_cast<ast_types::arg_with_type_t *>(a)
+                                     ->name.value);
                 }
                 return args;
               }()));
@@ -421,9 +443,8 @@ translate_program(ast_types::global_scope program, logger::logger *logger) {
         case act_type::glbdef:
           global_entries.push_back((ast::GlobalEntry *)new ast::GlobalVariable(
               dynamic_cast<ast_types::glbdef *>(e)->name.value,
-              recursive_translate_body(
-                  {scope_element::global, (scope_element)i,
-                   scope_element::args})[0]
+              recursive_translate_body({scope_element::global, (scope_element)i,
+                                        scope_element::args})[0]
                   ->to_const(),
               false));
           break;
